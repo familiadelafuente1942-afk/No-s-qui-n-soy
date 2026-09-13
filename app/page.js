@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { getSupabase } from "../lib/supabase";
 
 const sections = [
   "Inicio",
@@ -23,35 +24,35 @@ const defaultDesign = {
   text: "#f1eee7",
   secondaryText: "#aaa59c",
   border: "#303030",
-
   backgroundImage: "",
   backgroundOpacity: 22,
   backgroundBlur: 0,
   backgroundPosition: "center",
   backgroundSize: "cover",
-
   titleFont: "Georgia",
   bodyFont: "Arial",
-
   titleSize: 48,
   bodySize: 16,
-
   radius: 18,
   buttonRadius: 11,
   sidebarWidth: 270,
-
   sidebarOpacity: 100,
   sidebarBlur: 0,
-
   cardBlur: 0,
-
   contentWidth: 1140,
 };
 
 export default function Home() {
-  const [active, setActive] = useState("Inicio");
+  const supabase = useMemo(() => getSupabase(), []);
 
+  const [active, setActive] = useState("Inicio");
   const [question, setQuestion] = useState("");
+
+  const [stories, setStories] = useState([]);
+  const [project, setProject] = useState(null);
+
+  const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const audioInput = useRef(null);
   const mediaInput = useRef(null);
@@ -88,6 +89,150 @@ export default function Home() {
     } catch {}
   }, [design]);
 
+  useEffect(() => {
+    boot();
+  }, []);
+
+  async function boot() {
+    setLoading(true);
+
+    try {
+      let { data: existingProject, error: projectError } =
+        await supabase
+          .from("projects")
+          .select("*")
+          .eq("title", "NO SE QUIEN SOY")
+          .limit(1)
+          .maybeSingle();
+
+      if (projectError) {
+        console.error(projectError);
+      }
+
+      if (!existingProject) {
+        const created = await supabase
+          .from("projects")
+          .insert({
+            title: "NO SE QUIEN SOY",
+          })
+          .select()
+          .single();
+
+        if (created.error) {
+          throw created.error;
+        }
+
+        existingProject = created.data;
+      }
+
+      setProject(existingProject);
+
+      if (existingProject?.id) {
+        await loadStories(existingProject.id);
+      }
+    } catch (error) {
+      flash(
+        "No se pudo conectar con Supabase: " +
+          error.message
+      );
+    }
+
+    setLoading(false);
+  }
+
+  async function loadStories(projectId) {
+    const { data, error } = await supabase
+      .from("stories")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      flash(error.message);
+      return;
+    }
+
+    setStories(data || []);
+
+    setStats((prev) => ({
+      ...prev,
+      historias: data?.length || 0,
+    }));
+  }
+
+  async function saveStory(title, story) {
+    if (!story.trim()) {
+      flash("Escribí el recuerdo antes de guardarlo.");
+      return false;
+    }
+
+    if (!project?.id) {
+      flash("El proyecto todavía no está cargado.");
+      return false;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("stories")
+      .insert({
+        project_id: project.id,
+        title:
+          title.trim() ||
+          "Recuerdo sin título",
+        original_text: story.trim(),
+        source_type: "written",
+      });
+
+    setLoading(false);
+
+    if (error) {
+      flash(
+        "No se pudo guardar: " +
+          error.message
+      );
+      return false;
+    }
+
+    await loadStories(project.id);
+
+    flash("Recuerdo guardado en Supabase.");
+
+    return true;
+  }
+
+  async function deleteStory(id) {
+    const ok = window.confirm(
+      "¿Querés eliminar este recuerdo?"
+    );
+
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("stories")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      flash(error.message);
+      return;
+    }
+
+    await loadStories(project.id);
+
+    flash("Recuerdo eliminado.");
+  }
+
+  function flash(text) {
+    setNotice(text);
+
+    setTimeout(() => {
+      setNotice("");
+    }, 3500);
+  }
+
   function updateDesign(key, value) {
     setDesign((prev) => ({
       ...prev,
@@ -107,7 +252,10 @@ export default function Home() {
     const reader = new FileReader();
 
     reader.onload = () => {
-      updateDesign("backgroundImage", reader.result);
+      updateDesign(
+        "backgroundImage",
+        reader.result
+      );
     };
 
     reader.readAsDataURL(file);
@@ -130,10 +278,11 @@ export default function Home() {
 
     setStats((prev) => ({
       ...prev,
-      audios: prev.audios + files.length,
+      audios:
+        prev.audios + files.length,
     }));
 
-    alert(
+    flash(
       `${files.length} audio(s) seleccionado(s).`
     );
   }
@@ -145,7 +294,7 @@ export default function Home() {
 
     if (!files.length) return;
 
-    alert(
+    flash(
       `${files.length} archivo(s) seleccionado(s).`
     );
   }
@@ -153,33 +302,45 @@ export default function Home() {
   function preguntar() {
     if (!question.trim()) return;
 
-    alert(
-      "La búsqueda inteligente se conectará con todo el archivo biográfico."
+    flash(
+      "La búsqueda inteligente se conectará después con todo el archivo biográfico."
     );
   }
 
   const styleVariables = {
     "--bg": design.background,
+
     "--sidebar": hexToRgba(
       design.sidebar,
       design.sidebarOpacity / 100
     ),
+
     "--card": hexToRgba(
       design.card,
       design.cardOpacity / 100
     ),
+
     "--accent": design.accent,
     "--text": design.text,
     "--secondary": design.secondaryText,
     "--border": design.border,
 
     "--radius": `${design.radius}px`,
-    "--button-radius": `${design.buttonRadius}px`,
-    "--sidebar-width": `${design.sidebarWidth}px`,
-    "--content-width": `${design.contentWidth}px`,
 
-    "--title-size": `${design.titleSize}px`,
-    "--body-size": `${design.bodySize}px`,
+    "--button-radius":
+      `${design.buttonRadius}px`,
+
+    "--sidebar-width":
+      `${design.sidebarWidth}px`,
+
+    "--content-width":
+      `${design.contentWidth}px`,
+
+    "--title-size":
+      `${design.titleSize}px`,
+
+    "--body-size":
+      `${design.bodySize}px`,
 
     "--title-font":
       design.titleFont === "Georgia"
@@ -197,12 +358,16 @@ export default function Home() {
         ? "Helvetica, Arial, sans-serif"
         : "Arial, Helvetica, sans-serif",
 
-    "--card-blur": `blur(${design.cardBlur}px)`,
-    "--sidebar-blur": `blur(${design.sidebarBlur}px)`,
+    "--card-blur":
+      `blur(${design.cardBlur}px)`,
 
-    "--background-image": design.backgroundImage
-      ? `url("${design.backgroundImage}")`
-      : "none",
+    "--sidebar-blur":
+      `blur(${design.sidebarBlur}px)`,
+
+    "--background-image":
+      design.backgroundImage
+        ? `url("${design.backgroundImage}")`
+        : "none",
 
     "--background-opacity":
       design.backgroundOpacity / 100,
@@ -224,6 +389,12 @@ export default function Home() {
     >
       <div className="wallpaper" />
 
+      {notice && (
+        <div className="appNotice">
+          {notice}
+        </div>
+      )}
+
       <aside className="sidebar">
         <div className="brand">
           <span>NO SE</span>
@@ -239,7 +410,9 @@ export default function Home() {
                   ? "navItem active"
                   : "navItem"
               }
-              onClick={() => setActive(section)}
+              onClick={() =>
+                setActive(section)
+              }
             >
               {section}
             </button>
@@ -337,7 +510,7 @@ export default function Home() {
 
               <StatCard
                 label="Historias"
-                number={stats.historias}
+                number={stories.length}
               />
 
               <StatCard
@@ -358,26 +531,31 @@ export default function Home() {
                 </div>
 
                 <h2>
-                  Buscá recuerdos, personas, años o
-                  escenas
+                  Buscá recuerdos, personas,
+                  años o escenas
                 </h2>
 
                 <p>
-                  La inteligencia del proyecto podrá
-                  responder usando audios, textos,
-                  fotografías, videos y documentos.
+                  La inteligencia del proyecto
+                  podrá responder usando
+                  audios, textos, fotografías,
+                  videos y documentos.
                 </p>
 
                 <div className="searchBar">
                   <input
                     value={question}
                     onChange={(e) =>
-                      setQuestion(e.target.value)
+                      setQuestion(
+                        e.target.value
+                      )
                     }
                     placeholder="Ej.: ¿Qué pasó en 1985?"
                   />
 
-                  <button onClick={preguntar}>
+                  <button
+                    onClick={preguntar}
+                  >
                     Preguntar
                   </button>
                 </div>
@@ -404,13 +582,16 @@ export default function Home() {
                 />
               </div>
             </section>
-
-            <footer>
-              NO SE QUIEN SOY · Una historia real ·
-              Podés hablar, escribir, subir fotos y
-              videos · Proyecto privado
-            </footer>
           </>
+        )}
+
+        {active === "Historia" && (
+          <StoryEditor
+            stories={stories}
+            loading={loading}
+            onSave={saveStory}
+            onDelete={deleteStory}
+          />
         )}
 
         {active === "Audios" && (
@@ -427,28 +608,7 @@ export default function Home() {
             >
               + Subir varios audios
             </button>
-
-            <input
-              ref={audioInput}
-              type="file"
-              accept="audio/*"
-              multiple
-              hidden
-              onChange={subirAudios}
-            />
           </SectionPage>
-        )}
-
-        {active === "Historia" && (
-          <StoryEditor
-            onSave={() =>
-              setStats((prev) => ({
-                ...prev,
-                historias:
-                  prev.historias + 1,
-              }))
-            }
-          />
         )}
 
         {active === "Personajes" && (
@@ -470,16 +630,18 @@ export default function Home() {
             description="Los recuerdos se transformarán en capítulos, escenas y una narración completa."
           >
             <div className="emptyBook">
-              <span>NO SE QUIEN SOY</span>
+              <span>
+                NO SE QUIEN SOY
+              </span>
 
               <h3>
-                El libro empieza con el primer
-                recuerdo.
+                El libro empieza con el
+                primer recuerdo.
               </h3>
 
               <p>
-                Cada historia incorporada podrá
-                formar parte del manuscrito.
+                Ya tenés {stories.length} recuerdo(s)
+                guardado(s).
               </p>
             </div>
           </SectionPage>
@@ -492,13 +654,16 @@ export default function Home() {
             description="Personajes, temporadas, episodios y escenas para desarrollar la adaptación audiovisual."
           >
             <div className="seriesCard">
-              <div>EPISODIO 01</div>
+              <div>
+                EPISODIO 01
+              </div>
 
               <h3>El origen</h3>
 
               <p>
-                El comienzo de una historia que
-                todavía está por reconstruirse.
+                El comienzo de una historia
+                que todavía está por
+                reconstruirse.
               </p>
             </div>
           </SectionPage>
@@ -511,10 +676,25 @@ export default function Home() {
             description="Audios, textos, fotografías, documentos y videos organizados en un único archivo biográfico."
           >
             <div className="archiveGrid">
-              <ArchiveBox title="Audios" />
-              <ArchiveBox title="Documentos" />
-              <ArchiveBox title="Fotografías" />
-              <ArchiveBox title="Videos" />
+              <ArchiveBox
+                title="Audios"
+                value={stats.audios}
+              />
+
+              <ArchiveBox
+                title="Historias"
+                value={stories.length}
+              />
+
+              <ArchiveBox
+                title="Fotografías"
+                value={0}
+              />
+
+              <ArchiveBox
+                title="Videos"
+                value={0}
+              />
             </div>
           </SectionPage>
         )}
@@ -533,15 +713,6 @@ export default function Home() {
             >
               + Subir fotos y videos
             </button>
-
-            <input
-              ref={mediaInput}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              hidden
-              onChange={subirArchivos}
-            />
           </SectionPage>
         )}
 
@@ -557,6 +728,139 @@ export default function Home() {
         )}
       </main>
     </div>
+  );
+}
+
+function StoryEditor({
+  stories,
+  loading,
+  onSave,
+  onDelete,
+}) {
+  const [title, setTitle] =
+    useState("");
+
+  const [story, setStory] =
+    useState("");
+
+  async function save() {
+    const ok = await onSave(
+      title,
+      story
+    );
+
+    if (ok) {
+      setTitle("");
+      setStory("");
+    }
+  }
+
+  return (
+    <section className="sectionPage">
+      <div className="eyebrow">
+        ESCRIBIR LA HISTORIA
+      </div>
+
+      <h1>Historia</h1>
+
+      <p className="sectionDescription">
+        Escribí los recuerdos y dejalos
+        guardados dentro del archivo
+        biográfico.
+      </p>
+
+      <div className="editor">
+        <input
+          value={title}
+          onChange={(e) =>
+            setTitle(e.target.value)
+          }
+          placeholder="Título del recuerdo"
+        />
+
+        <textarea
+          value={story}
+          onChange={(e) =>
+            setStory(e.target.value)
+          }
+          placeholder="Empezá a escribir..."
+        />
+
+        <button
+          className="primaryButton"
+          disabled={loading}
+          onClick={save}
+        >
+          {loading
+            ? "Guardando..."
+            : "Guardar recuerdo"}
+        </button>
+      </div>
+
+      <div className="savedStories">
+        <div className="savedStoriesHeader">
+          <div>
+            <div className="eyebrow">
+              ARCHIVO DE RECUERDOS
+            </div>
+
+            <h2>
+              Recuerdos guardados
+            </h2>
+          </div>
+
+          <span>
+            {stories.length}
+          </span>
+        </div>
+
+        {stories.length === 0 ? (
+          <div className="emptyState">
+            Todavía no hay recuerdos
+            guardados.
+          </div>
+        ) : (
+          stories.map((item) => (
+            <div
+              className="storyCard"
+              key={item.id}
+            >
+              <div className="storyCardTop">
+                <div>
+                  <h3>
+                    {item.title ||
+                      "Recuerdo"}
+                  </h3>
+
+                  <small>
+                    {item.created_at
+                      ? new Date(
+                          item.created_at
+                        ).toLocaleString(
+                          "es-AR"
+                        )
+                      : ""}
+                  </small>
+                </div>
+
+                <button
+                  className="deleteStoryButton"
+                  onClick={() =>
+                    onDelete(item.id)
+                  }
+                >
+                  Eliminar
+                </button>
+              </div>
+
+              <p>
+                {item.original_text}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -579,8 +883,8 @@ function DesignStudio({
           <h1>Diseño</h1>
 
           <p>
-            Personalizá completamente la apariencia
-            de NO SE QUIEN SOY.
+            Personalizá completamente la
+            apariencia de NO SE QUIEN SOY.
           </p>
         </div>
 
@@ -606,7 +910,9 @@ function DesignStudio({
           />
 
           <div className="designerField">
-            <label>Imagen de fondo</label>
+            <label>
+              Imagen de fondo
+            </label>
 
             <div className="designerButtons">
               <button
@@ -639,7 +945,9 @@ function DesignStudio({
 
           <RangeControl
             label="Visibilidad de imagen"
-            value={design.backgroundOpacity}
+            value={
+              design.backgroundOpacity
+            }
             min={0}
             max={100}
             suffix="%"
@@ -653,47 +961,15 @@ function DesignStudio({
 
           <RangeControl
             label="Desenfoque del fondo"
-            value={design.backgroundBlur}
+            value={
+              design.backgroundBlur
+            }
             min={0}
             max={30}
             suffix=" px"
             onChange={(value) =>
               updateDesign(
                 "backgroundBlur",
-                value
-              )
-            }
-          />
-
-          <SelectControl
-            label="Posición"
-            value={design.backgroundPosition}
-            options={[
-              ["center", "Centro"],
-              ["top", "Arriba"],
-              ["bottom", "Abajo"],
-              ["left", "Izquierda"],
-              ["right", "Derecha"],
-            ]}
-            onChange={(value) =>
-              updateDesign(
-                "backgroundPosition",
-                value
-              )
-            }
-          />
-
-          <SelectControl
-            label="Ajuste de imagen"
-            value={design.backgroundSize}
-            options={[
-              ["cover", "Cubrir pantalla"],
-              ["contain", "Imagen completa"],
-              ["auto", "Tamaño original"],
-            ]}
-            onChange={(value) =>
-              updateDesign(
-                "backgroundSize",
                 value
               )
             }
@@ -705,7 +981,10 @@ function DesignStudio({
             label="Color principal"
             value={design.accent}
             onChange={(value) =>
-              updateDesign("accent", value)
+              updateDesign(
+                "accent",
+                value
+              )
             }
           />
 
@@ -713,13 +992,18 @@ function DesignStudio({
             label="Texto principal"
             value={design.text}
             onChange={(value) =>
-              updateDesign("text", value)
+              updateDesign(
+                "text",
+                value
+              )
             }
           />
 
           <ColorControl
             label="Texto secundario"
-            value={design.secondaryText}
+            value={
+              design.secondaryText
+            }
             onChange={(value) =>
               updateDesign(
                 "secondaryText",
@@ -732,7 +1016,10 @@ function DesignStudio({
             label="Tarjetas"
             value={design.card}
             onChange={(value) =>
-              updateDesign("card", value)
+              updateDesign(
+                "card",
+                value
+              )
             }
           />
 
@@ -740,15 +1027,10 @@ function DesignStudio({
             label="Menú lateral"
             value={design.sidebar}
             onChange={(value) =>
-              updateDesign("sidebar", value)
-            }
-          />
-
-          <ColorControl
-            label="Bordes"
-            value={design.border}
-            onChange={(value) =>
-              updateDesign("border", value)
+              updateDesign(
+                "sidebar",
+                value
+              )
             }
           />
         </DesignGroup>
@@ -756,7 +1038,9 @@ function DesignStudio({
         <DesignGroup title="Tarjetas">
           <RangeControl
             label="Transparencia"
-            value={design.cardOpacity}
+            value={
+              design.cardOpacity
+            }
             min={10}
             max={100}
             suffix="%"
@@ -769,69 +1053,14 @@ function DesignStudio({
           />
 
           <RangeControl
-            label="Desenfoque"
-            value={design.cardBlur}
-            min={0}
-            max={30}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "cardBlur",
-                value
-              )
-            }
-          />
-
-          <RangeControl
             label="Puntas redondeadas"
             value={design.radius}
             min={0}
             max={40}
             suffix=" px"
             onChange={(value) =>
-              updateDesign("radius", value)
-            }
-          />
-        </DesignGroup>
-
-        <DesignGroup title="Menú lateral">
-          <RangeControl
-            label="Ancho"
-            value={design.sidebarWidth}
-            min={190}
-            max={380}
-            suffix=" px"
-            onChange={(value) =>
               updateDesign(
-                "sidebarWidth",
-                value
-              )
-            }
-          />
-
-          <RangeControl
-            label="Transparencia"
-            value={design.sidebarOpacity}
-            min={20}
-            max={100}
-            suffix="%"
-            onChange={(value) =>
-              updateDesign(
-                "sidebarOpacity",
-                value
-              )
-            }
-          />
-
-          <RangeControl
-            label="Desenfoque"
-            value={design.sidebarBlur}
-            min={0}
-            max={30}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "sidebarBlur",
+                "radius",
                 value
               )
             }
@@ -856,22 +1085,6 @@ function DesignStudio({
             }
           />
 
-          <SelectControl
-            label="Textos"
-            value={design.bodyFont}
-            options={[
-              ["Arial", "Arial"],
-              ["Helvetica", "Helvetica"],
-              ["Georgia", "Georgia"],
-            ]}
-            onChange={(value) =>
-              updateDesign(
-                "bodyFont",
-                value
-              )
-            }
-          />
-
           <RangeControl
             label="Tamaño del título"
             value={design.titleSize}
@@ -885,55 +1098,7 @@ function DesignStudio({
               )
             }
           />
-
-          <RangeControl
-            label="Tamaño de texto"
-            value={design.bodySize}
-            min={12}
-            max={24}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "bodySize",
-                value
-              )
-            }
-          />
         </DesignGroup>
-
-        <DesignGroup title="Botones y contenido">
-          <RangeControl
-            label="Redondeo de botones"
-            value={design.buttonRadius}
-            min={0}
-            max={40}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "buttonRadius",
-                value
-              )
-            }
-          />
-
-          <RangeControl
-            label="Ancho del contenido"
-            value={design.contentWidth}
-            min={800}
-            max={1500}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "contentWidth",
-                value
-              )
-            }
-          />
-        </DesignGroup>
-      </div>
-
-      <div className="designSaved">
-        ✓ Los cambios se guardan automáticamente
       </div>
     </section>
   );
@@ -965,7 +1130,9 @@ function ColorControl({
           type="color"
           value={value}
           onChange={(e) =>
-            onChange(e.target.value)
+            onChange(
+              e.target.value
+            )
           }
         />
 
@@ -1001,7 +1168,9 @@ function RangeControl({
         value={value}
         onChange={(e) =>
           onChange(
-            Number(e.target.value)
+            Number(
+              e.target.value
+            )
           )
         }
       />
@@ -1022,17 +1191,21 @@ function SelectControl({
       <select
         value={value}
         onChange={(e) =>
-          onChange(e.target.value)
+          onChange(
+            e.target.value
+          )
         }
       >
-        {options.map(([value, name]) => (
-          <option
-            key={value}
-            value={value}
-          >
-            {name}
-          </option>
-        ))}
+        {options.map(
+          ([value, name]) => (
+            <option
+              key={value}
+              value={value}
+            >
+              {name}
+            </option>
+          )
+        )}
       </select>
     </div>
   );
@@ -1087,75 +1260,14 @@ function SectionPage({
   );
 }
 
-function StoryEditor({
-  onSave,
-}) {
-  const [title, setTitle] =
-    useState("");
-
-  const [story, setStory] =
-    useState("");
-
-  function saveStory() {
-    if (!story.trim()) return;
-
-    onSave();
-
-    setTitle("");
-    setStory("");
-
-    alert("Recuerdo guardado.");
-  }
-
-  return (
-    <section className="sectionPage">
-      <div className="eyebrow">
-        ESCRIBIR LA HISTORIA
-      </div>
-
-      <h1>Un recuerdo</h1>
-
-      <p className="sectionDescription">
-        Escribilo como lo recordás. Después
-        podrá organizarse cronológicamente y
-        convertirse en parte del libro.
-      </p>
-
-      <div className="editor">
-        <input
-          value={title}
-          onChange={(e) =>
-            setTitle(e.target.value)
-          }
-          placeholder="Título del recuerdo"
-        />
-
-        <textarea
-          value={story}
-          onChange={(e) =>
-            setStory(e.target.value)
-          }
-          placeholder="Empezá a escribir..."
-        />
-
-        <button
-          className="primaryButton"
-          onClick={saveStory}
-        >
-          Guardar recuerdo
-        </button>
-      </div>
-    </section>
-  );
-}
-
 function ArchiveBox({
   title,
+  value,
 }) {
   return (
     <div className="archiveBox">
       <span>{title}</span>
-      <strong>0</strong>
+      <strong>{value}</strong>
     </div>
   );
 }
@@ -1168,12 +1280,11 @@ function hexToRgba(
     return `rgba(0,0,0,${opacity})`;
   }
 
-  const clean = hex.replace("#", "");
+  const clean =
+    hex.replace("#", "");
 
-  const bigint = parseInt(
-    clean,
-    16
-  );
+  const bigint =
+    parseInt(clean, 16);
 
   const r =
     (bigint >> 16) & 255;
