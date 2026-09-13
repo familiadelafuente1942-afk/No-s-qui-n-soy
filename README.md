@@ -1,22 +1,14 @@
-# NO SE QUIEN SOY — V3 lista para Vercel
+# NO SE QUIEN SOY — Next.js + Supabase
 
-## Qué funciona
-- Escritura y edición de recuerdos.
-- Grabación directa desde micrófono.
-- Carga múltiple de audios, fotos, videos y documentos.
-- Los archivos reales se guardan en IndexedDB del dispositivo (no sólo su nombre).
-- Reproducción de audio/video y vista previa de fotos.
-- Borrar elementos.
-- Exportar/importar respaldo JSON de textos y metadatos.
-- IA documental por /api/ask (no inventar).
-- Transcripción por /api/transcribe.
-- Instalable como PWA desde Safari/Chrome cuando está publicada.
+## Variables necesarias en Vercel
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-## Publicar en Vercel
-1. Subir esta carpeta a GitHub.
-2. Importarla en Vercel.
-3. En Project Settings > Environment Variables crear OPENAI_API_KEY.
-4. Deploy.
+## Opcional para IA/transcripción
+- OPENAI_API_KEY (Secret, sólo servidor)
 
-## Importante
-Esta versión guarda los archivos multimedia en el navegador del dispositivo. Para sincronizar entre varios dispositivos/usuarios, el siguiente paso es agregar Supabase Storage + Auth.
+## Supabase
+La base debe contener: projects, stories, people, chapters, episodes, media, app_settings y bucket privado `memorias`, con RLS como en el SQL preparado para el proyecto.
+
+## Publicación
+Subir todo el contenido de esta carpeta al repositorio GitHub conectado a Vercel. Framework: Next.js. No configurar Output Directory manualmente.
