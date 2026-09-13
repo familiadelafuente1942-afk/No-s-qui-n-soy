@@ -1,0 +1,10 @@
+{
+  "name": "no-se-quien-soy",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "formidable": "^3.5.2",
+    "openai": "^5.20.0"
+  }
+}

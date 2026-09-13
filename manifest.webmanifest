@@ -1,0 +1,9 @@
+{
+  "name":"NO SE QUIEN SOY",
+  "short_name":"NO SE QUIEN SOY",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#0d0d0d",
+  "theme_color":"#111111",
+  "description":"Archivo biográfico privado para memorias, libro y serie."
+}

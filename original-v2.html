@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#111111" />
+<title>NO SE QUIEN SOY</title>
+<style>
+:root{
+  --bg:#0d0d0d; --panel:#161616; --panel2:#1d1d1d; --line:#2a2a2a;
+  --text:#f5f1e8; --muted:#aaa49a; --accent:#d9c7a3; --danger:#9c5a5a;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
+.app{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
+.sidebar{border-right:1px solid var(--line);padding:24px 18px;position:sticky;top:0;height:100vh;background:#101010}
+.brand{font-family:Georgia,serif;letter-spacing:4px;font-size:24px;margin:4px 8px 28px}
+.nav button{width:100%;background:none;color:var(--muted);border:0;text-align:left;padding:13px 14px;border-radius:12px;font-size:15px;margin:3px 0;cursor:pointer}
+.nav button.active,.nav button:hover{background:var(--panel2);color:var(--text)}
+.main{padding:30px;max-width:1450px;width:100%;margin:auto}
+.header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:26px}
+.header h1{font-family:Georgia,serif;font-weight:500;font-size:38px;margin:0}
+.badge{border:1px solid var(--line);padding:8px 12px;border-radius:999px;color:var(--accent);font-size:12px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+button.primary,.upload-label{background:var(--accent);color:#111;border:0;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer}
+button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:12px 16px;border-radius:12px;cursor:pointer}
+input[type=file]{display:none}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px}
+.stat .value{font-size:30px;font-weight:700;margin-top:8px}
+.stat .label{font-size:13px;color:var(--muted)}
+.hero{display:grid;grid-template-columns:1.4fr .9fr;gap:16px;margin-top:18px}
+.hero .card{min-height:245px}
+.section-title{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+.chatbox{display:flex;gap:8px;margin-top:18px}
+.chatbox input,.field,textarea{width:100%;background:#0f0f0f;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px}
+textarea{min-height:180px;resize:vertical}
+.timeline{display:flex;flex-direction:column;gap:10px}
+.timeline-item{padding:12px;border-left:2px solid var(--accent);background:#121212;border-radius:0 12px 12px 0}
+.muted{color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{border:1px solid var(--line);background:#121212;border-radius:14px;padding:14px}
+.item h3{margin:0 0 6px;font-size:16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tabs button{background:#151515;border:1px solid var(--line);color:var(--muted);padding:10px 13px;border-radius:999px;cursor:pointer}
+.tabs button.active{background:var(--accent);color:#111;border-color:var(--accent)}
+.hidden{display:none!important}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.kicker{color:var(--accent);font-size:12px;letter-spacing:1px;text-transform:uppercase}
+.empty{padding:30px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
+.pill{display:inline-block;padding:6px 9px;background:#202020;border-radius:999px;font-size:12px;color:var(--muted);margin:3px}.upload-feedback{margin-top:10px;color:var(--accent);font-size:13px}
+footer{color:#777;margin:30px 0 10px;font-size:12px}
+@media(max-width:900px){
+ .app{grid-template-columns:1fr}
+ .sidebar{height:auto;position:relative;border-right:0;border-bottom:1px solid var(--line);padding:14px}
+ .brand{margin:4px 6px 10px}
+ .nav{display:flex;overflow:auto;gap:6px}
+ .nav button{white-space:nowrap;width:auto}
+ .main{padding:18px}
+ .grid{grid-template-columns:1fr 1fr}
+ .hero,.two,.three{grid-template-columns:1fr}
+ .header{align-items:flex-start;flex-direction:column}
+ .header h1{font-size:31px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">NO SE QUIEN SOY</div>
+    <div class="nav">
+      <button class="active" data-page="inicio">Inicio</button>
+      <button data-page="audios">Audios</button>
+      <button data-page="historia">Historia</button>
+      <button data-page="personajes">Personajes</button>
+      <button data-page="libro">El Libro</button>
+      <button data-page="serie">La Serie</button>
+      <button data-page="archivo">Archivo</button>
+      <button data-page="media">Fotos y Videos</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="inicio" class="page">
+      <div class="header">
+        <div><div class="kicker">Proyecto biográfico privado</div><h1>La historia de una vida extraordinaria</h1></div>
+        <span class="badge">NO INVENTAR · ACTIVO</span>
+      </div>
+      <div class="actions">
+        <button class="primary" id="recordBtn">● Grabar historia</button>
+        <button class="secondary" id="writeBtn">✎ Escribir recuerdo</button>
+        <label class="upload-label">Subir varios audios<input id="audioUpload" type="file" accept="audio/*" multiple></label>
+        <label class="upload-label">Subir varias fotos/documentos<input id="fileUpload" type="file" accept="image/*,.pdf,.doc,.docx" multiple></label>
+      </div>
+
+      <div class="grid" style="margin-top:18px">
+        <div class="card stat"><div class="label">Audios</div><div class="value" id="statAudios">0</div></div>
+        <div class="card stat"><div class="label">Historias</div><div class="value" id="statHistorias">0</div></div>
+        <div class="card stat"><div class="label">Personajes</div><div class="value" id="statPersonajes">0</div></div>
+        <div class="card stat"><div class="label">Capítulos</div><div class="value" id="statCapitulos">0</div></div>
+      </div>
+
+      <div class="hero">
+        <div class="card">
+          <div class="section-title">Preguntale a la historia</div>
+          <h2 style="font-family:Georgia,serif;font-weight:500">Buscá recuerdos, personas, años o escenas</h2>
+          <p class="muted">La versión final podrá responder usando todos los audios y documentos del proyecto.</p>
+          <div class="chatbox"><input id="historyQuery" placeholder="Ej.: ¿Qué pasó en 1985?"><button class="primary" id="askBtn">Preguntar</button></div>
+          <div id="answer" class="item hidden" style="margin-top:12px"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Próxima entrevista</div>
+          <div class="timeline">
+            <div class="timeline-item"><b>Infancia</b><div class="muted">¿Cuál es el primer recuerdo que conservás?</div></div>
+            <div class="timeline-item"><b>Familia</b><div class="muted">¿Quién fue la persona que más influyó en vos?</div></div>
+            <div class="timeline-item"><b>Giro de vida</b><div class="muted">¿Qué decisión cambió todo?</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="audios" class="page hidden">
+      <div class="header"><div><div class="kicker">Archivo oral</div><h1>Audios</h1></div></div>
+      <div class="actions">
+        <button class="primary" id="recordBtn2">● Grabar</button>
+        <label class="upload-label">Subir varios audios<input id="audioUpload2" type="file" accept="audio/*" multiple></label>
+      </div>
+      <div class="upload-feedback">Podés seleccionar muchos audios juntos desde Archivos.</div><div id="audioList" class="list" style="margin-top:18px"></div>
+    </section>
+
+    <section id="historia" class="page hidden">
+      <div class="header"><div><div class="kicker">Narrativa</div><h1>Historia</h1></div></div>
+      <div class="two">
+        <div class="card">
+          <div class="section-title">Nuevo recuerdo · Escrito</div>
+<p class="muted">Si no podés hablar, escribí directamente acá. Este texto entra al mismo archivo que los audios y después puede convertirse en capítulo o escena.</p>
+          <input id="storyTitle" class="field" placeholder="Título del recuerdo">
+          <textarea id="storyText" placeholder="Escribí libremente el recuerdo, aunque esté desordenado. Podés contar qué pasó, quién estaba, dónde fue, qué sentiste y cualquier detalle que recuerdes..."></textarea>
+          <button class="primary" id="saveStory">Guardar historia</button>
+        </div>
+        <div class="card">
+          <div class="section-title">Modo de escritura</div>
+          <span class="pill">Original</span><span class="pill">Corregida</span><span class="pill">Literaria</span>
+          <p class="muted">En la versión con IA, cada historia tendrá las tres versiones y conservará siempre su fuente original.</p>
+        </div>
+      </div>
+      <div id="storyList" class="list" style="margin-top:18px"></div>
+    </section>
+
+    <section id="personajes" class="page hidden">
+      <div class="header"><div><div class="kicker">Universo real</div><h1>Personajes</h1></div></div>
+      <div class="two">
+        <div class="card">
+          <input id="personName" class="field" placeholder="Nombre">
+          <input id="personRole" class="field" placeholder="Relación / rol">
+          <button class="primary" id="addPerson">Agregar personaje</button>
+        </div>
+        <div class="card"><div class="section-title">Cronología</div><p class="muted">La IA final vinculará automáticamente personas, años, lugares y acontecimientos.</p></div>
+      </div>
+      <div id="personList" class="list" style="margin-top:18px"></div>
+    </section>
+
+    <section id="libro" class="page hidden">
+      <div class="header"><div><div class="kicker">Edición</div><h1>El Libro</h1></div><button class="primary" id="newChapter">+ Capítulo</button></div>
+      <div id="chapterList" class="list"></div>
+    </section>
+
+    <section id="serie" class="page hidden">
+      <div class="header"><div><div class="kicker">Adaptación audiovisual</div><h1>La Serie</h1></div></div>
+      <div class="three">
+        <div class="card"><div class="section-title">Logline</div><p>Una vida marcada por decisiones extraordinarias, éxitos, pérdidas y secretos familiares que atraviesan décadas.</p></div>
+        <div class="card"><div class="section-title">Temporada 1</div><p class="muted">8 episodios · estructura pendiente de la historia real.</p></div>
+        <div class="card"><div class="section-title">Regla</div><p><b>Hecho documentado</b> y <b>reconstrucción dramática</b> siempre diferenciados.</p></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="section-title">Biblia de serie</div>
+        <p class="muted">Acá se generarán personajes, arcos, episodios, escenas, conflictos, giros y cliffhangers.</p>
+      </div>
+    </section>
+
+    <section id="archivo" class="page hidden">
+      <div class="header"><div><div class="kicker">Fuentes</div><h1>Archivo documental</h1></div></div>
+      <label class="upload-label">Subir varias fotos/documentos<input id="fileUpload2" type="file" accept="image/*,.pdf,.doc,.docx" multiple></label>
+      <div id="fileList" class="list" style="margin-top:18px"></div>
+    </section>
+
+
+    <section id="media" class="page hidden">
+      <div class="header">
+        <div><div class="kicker">Archivo visual</div><h1>Fotos y Videos</h1></div>
+      </div>
+      <div class="actions">
+        <label class="upload-label">Subir varias fotos<input id="photoUpload" type="file" accept="image/*" multiple></label>
+        <label class="upload-label">Subir varios videos<input id="videoUpload" type="file" accept="video/*" multiple></label>
+      </div>
+      <div class="upload-feedback">Podés seleccionar muchas fotos o videos en una sola carga.</div><div class="two" style="margin-top:18px">
+        <div class="card">
+          <div class="section-title">Fotografías</div>
+          <p class="muted">Fotos familiares, lugares, documentos visuales y material histórico para relacionar con la historia.</p>
+          <div id="photoList" class="list"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">Videos</div>
+          <p class="muted">Entrevistas filmadas, videos familiares y material audiovisual para el libro y la serie.</p>
+          <div id="videoList" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer>NO SE QUIEN SOY · Una historia real · Podés hablar, escribir, subir fotos y videos · Proyecto privado</footer>
+  </main>
+</div>
+
+<script>
+const key='memoriasDataV1';
+const initial={audios:[],stories:[],people:[],chapters:[],files:[],photos:[],videos:[]};
+let data=JSON.parse(localStorage.getItem(key)||'null')||initial;
+if(!data.photos)data.photos=[];if(!data.videos)data.videos=[];
+function save(){localStorage.setItem(key,JSON.stringify(data));renderAll()}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  document.getElementById(b.dataset.page).classList.remove('hidden');
+});
+function fileHandler(files,type){
+  const count=files.length;
+  [...files].forEach(f=>{
+    const obj={name:f.name,size:f.size,type:f.type,date:new Date().toLocaleString()};
+    if(type==='audio') data.audios.push(obj); else data.files.push(obj);
+  });
+  save();
+  if(count>1) alert(count+' archivos cargados correctamente.');
+}
+['audioUpload','audioUpload2'].forEach(id=>document.getElementById(id).onchange=e=>fileHandler(e.target.files,'audio'));
+['fileUpload','fileUpload2'].forEach(id=>document.getElementById(id).onchange=e=>fileHandler(e.target.files,'file'));
+
+function visualHandler(files,type){
+  const count=files.length;
+  [...files].forEach(f=>{
+    const obj={name:f.name,size:f.size,type:f.type,date:new Date().toLocaleString()};
+    if(type==='photo') data.photos.push(obj); else data.videos.push(obj);
+  });
+  save();
+  if(count>1) alert(count+' archivos cargados correctamente.');
+}
+document.getElementById('photoUpload').onchange=e=>visualHandler(e.target.files,'photo');
+document.getElementById('videoUpload').onchange=e=>visualHandler(e.target.files,'video');
+
+
+let mediaRecorder,chunks=[];
+async function record(){
+  if(!navigator.mediaDevices?.getUserMedia){alert('Este navegador no permite grabación directa. Podés subir un audio.');return}
+  if(mediaRecorder && mediaRecorder.state==='recording'){mediaRecorder.stop();return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder=new MediaRecorder(stream); chunks=[];
+    mediaRecorder.ondataavailable=e=>chunks.push(e.data);
+    mediaRecorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:'audio/webm'});
+      data.audios.push({name:'Grabación '+new Date().toLocaleString(),size:blob.size,type:blob.type,date:new Date().toLocaleString(),recorded:true});
+      stream.getTracks().forEach(t=>t.stop()); save();
+      document.querySelectorAll('#recordBtn,#recordBtn2').forEach(b=>b.textContent='● Grabar historia');
+    };
+    mediaRecorder.start();
+    document.querySelectorAll('#recordBtn,#recordBtn2').forEach(b=>b.textContent='■ Detener grabación');
+  }catch(e){alert('No se pudo acceder al micrófono. Revisá permisos del navegador.')}
+}
+document.getElementById('recordBtn').onclick=record;
+document.getElementById('recordBtn2').onclick=record;
+
+document.getElementById('saveStory').onclick=()=>{
+  const title=document.getElementById('storyTitle').value.trim();
+  const text=document.getElementById('storyText').value.trim();
+  if(!title&&!text)return;
+  data.stories.unshift({title:title||'Recuerdo sin título',text,date:new Date().toLocaleString()});
+  document.getElementById('storyTitle').value='';document.getElementById('storyText').value='';save();
+};
+document.getElementById('addPerson').onclick=()=>{
+ const name=document.getElementById('personName').value.trim(); const role=document.getElementById('personRole').value.trim();
+ if(!name)return; data.people.push({name,role});document.getElementById('personName').value='';document.getElementById('personRole').value='';save();
+};
+document.getElementById('newChapter').onclick=()=>{
+ const n=data.chapters.length+1; data.chapters.push({title:'Capítulo '+n,text:'Material pendiente'});save();
+};
+document.getElementById('askBtn').onclick=()=>{
+ const q=document.getElementById('historyQuery').value.trim();
+ const a=document.getElementById('answer');
+ a.classList.remove('hidden');
+ if(!q){a.textContent='Escribí una pregunta.';return}
+ const hits=data.stories.filter(s=>(s.title+' '+s.text).toLowerCase().includes(q.toLowerCase().split(' ')[0]));
+ a.innerHTML=hits.length?'<b>Encontré '+hits.length+' recuerdo(s) relacionado(s).</b><br>'+hits.map(h=>h.title).join('<br>'):'Todavía no hay material suficiente. En la versión con IA, esta búsqueda usará todas las transcripciones, documentos y relaciones del proyecto.';
+};
+function renderAll(){
+ document.getElementById('statAudios').textContent=data.audios.length;
+ document.getElementById('statHistorias').textContent=data.stories.length;
+ document.getElementById('statPersonajes').textContent=data.people.length;
+ document.getElementById('statCapitulos').textContent=data.chapters.length;
+
+ const al=document.getElementById('audioList');
+ al.innerHTML=data.audios.length?data.audios.map((x,i)=>`<div class="item"><h3>${x.name}</h3><div class="muted">${x.date} · ${(x.size/1024/1024).toFixed(2)} MB</div><div style="margin-top:8px"><span class="pill">Pendiente transcripción IA</span></div></div>`).join(''):'<div class="empty">Todavía no cargaste audios.</div>';
+
+ const sl=document.getElementById('storyList');
+ sl.innerHTML=data.stories.length?data.stories.map(x=>`<div class="item"><h3>${x.title}</h3><div class="muted">${x.date}</div><p>${(x.text||'').replace(/</g,'&lt;')}</p></div>`).join(''):'<div class="empty">Guardá el primer recuerdo.</div>';
+
+ const pl=document.getElementById('personList');
+ pl.innerHTML=data.people.length?data.people.map(x=>`<div class="item"><h3>${x.name}</h3><div class="muted">${x.role||'Sin relación definida'}</div></div>`).join(''):'<div class="empty">Todavía no hay personajes.</div>';
+
+ const cl=document.getElementById('chapterList');
+ cl.innerHTML=data.chapters.length?data.chapters.map((x,i)=>`<div class="item"><div class="kicker">Capítulo ${i+1}</div><h3>${x.title}</h3><p class="muted">${x.text}</p></div>`).join(''):'<div class="empty">Todavía no hay capítulos. Conviene cargar primero varios audios.</div>';
+
+ const fl=document.getElementById('fileList');
+ fl.innerHTML=data.files.length?data.files.map(x=>`<div class="item"><h3>${x.name}</h3><div class="muted">${x.date}</div></div>`).join(''):'<div class="empty">Todavía no cargaste documentos o fotos.</div>';
+ const ph=document.getElementById('photoList');
+ ph.innerHTML=data.photos.length?data.photos.map(x=>`<div class="item"><h3>${x.name}</h3><div class="muted">${x.date} · ${(x.size/1024/1024).toFixed(2)} MB</div><span class="pill">Foto</span></div>`).join(''):'<div class="empty">Todavía no cargaste fotografías.</div>';
+ const vl=document.getElementById('videoList');
+ vl.innerHTML=data.videos.length?data.videos.map(x=>`<div class="item"><h3>${x.name}</h3><div class="muted">${x.date} · ${(x.size/1024/1024).toFixed(2)} MB</div><span class="pill">Video</span></div>`).join(''):'<div class="empty">Todavía no cargaste videos.</div>';
+
+}
+
+document.getElementById('writeBtn').onclick=()=>{
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  const navBtn=[...document.querySelectorAll('.nav button')].find(x=>x.dataset.page==='historia');
+  if(navBtn) navBtn.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+  document.getElementById('historia').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('storyText').focus(),50);
+};
+
+renderAll();
+</script>
+</body>
+</html>
