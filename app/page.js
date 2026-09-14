@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getSupabase } from "../lib/supabase";
 
@@ -42,28 +36,16 @@ const DEFAULT_DESIGN = {
 
 const DEFAULT_TEXTS = {
   projectName: "NO SE QUIEN SOY",
-
-  homeTitle:
-    "Una vida. Muchos recuerdos. Un libro.",
-
+  homeTitle: "Una vida. Muchos recuerdos. Un libro.",
   homeSubtitle:
     "Contá la historia como la recordás. La aplicación conserva cada recuerdo original y te ayuda a transformarlo en un libro.",
-
-  historyTitle:
-    "Contá la historia",
-
+  historyTitle: "Contá la historia",
   historySubtitle:
     "Podés escribir un recuerdo o contarlo con tu propia voz.",
-
-  bookTitle:
-    "El Libro",
-
+  bookTitle: "El Libro",
   bookSubtitle:
     "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
-
-  podcastTitle:
-    "Podcast",
-
+  podcastTitle: "Podcast",
   podcastSubtitle:
     "Convertí historias, capítulos y recuerdos en episodios de audio.",
 };
@@ -74,14 +56,9 @@ export default function Home() {
     []
   );
 
-  const mediaInput =
-    useRef(null);
-
-  const backgroundInput =
-    useRef(null);
-
-  const podcastInput =
-    useRef(null);
+  const mediaInput = useRef(null);
+  const backgroundInput = useRef(null);
+  const podcastInput = useRef(null);
 
   const [active, setActive] =
     useState("Inicio");
@@ -95,6 +72,9 @@ export default function Home() {
   const [chapters, setChapters] =
     useState([]);
 
+  const [mediaFiles, setMediaFiles] =
+    useState([]);
+
   const [design, setDesign] =
     useState(DEFAULT_DESIGN);
 
@@ -106,6 +86,16 @@ export default function Home() {
 
   const [loading, setLoading] =
     useState(false);
+
+  const [
+    mediaLoading,
+    setMediaLoading,
+  ] = useState(false);
+
+  const [
+    uploadingFiles,
+    setUploadingFiles,
+  ] = useState(false);
 
   const [
     editorLoading,
@@ -137,15 +127,28 @@ export default function Home() {
     setDraftSeed,
   ] = useState(null);
 
-  const [
-    uploadingFiles,
-    setUploadingFiles,
-  ] = useState(false);
-
   useEffect(() => {
     loadLocalPreferences();
     boot();
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "nqs_design",
+        JSON.stringify(design)
+      );
+    } catch {}
+  }, [design]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "nqs_texts",
+        JSON.stringify(texts)
+      );
+    } catch {}
+  }, [texts]);
 
   function loadLocalPreferences() {
     try {
@@ -179,28 +182,6 @@ export default function Home() {
     } catch {}
   }
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "nqs_design",
-        JSON.stringify(
-          design
-        )
-      );
-    } catch {}
-  }, [design]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "nqs_texts",
-        JSON.stringify(
-          texts
-        )
-      );
-    } catch {}
-  }, [texts]);
-
   async function boot() {
     setLoading(true);
 
@@ -219,10 +200,7 @@ export default function Home() {
         .maybeSingle();
 
       if (error) {
-        console.error(
-          "Error buscando proyecto:",
-          error
-        );
+        console.error(error);
       }
 
       if (!foundProject) {
@@ -259,6 +237,10 @@ export default function Home() {
           loadChapters(
             foundProject.id
           ),
+
+          loadMedia(
+            foundProject.id
+          ),
         ]);
       }
     } catch (error) {
@@ -293,7 +275,6 @@ export default function Home() {
 
     if (error) {
       console.error(
-        "Error cargando recuerdos:",
         error
       );
 
@@ -332,7 +313,6 @@ export default function Home() {
 
     if (error) {
       console.error(
-        "Error cargando capítulos:",
         error
       );
 
@@ -347,6 +327,166 @@ export default function Home() {
     );
 
     return result;
+  }
+
+  async function loadMedia(
+    projectId
+  ) {
+    if (!projectId) {
+      return [];
+    }
+
+    setMediaLoading(
+      true
+    );
+
+    try {
+      const folders = [
+        "archivo",
+        "audio",
+        "podcast",
+      ];
+
+      const collected =
+        [];
+
+      for (
+        const folder of
+        folders
+      ) {
+        const basePath =
+          `${projectId}/${folder}`;
+
+        const {
+          data,
+          error,
+        } =
+          await supabase.storage
+            .from(
+              "memorias"
+            )
+            .list(
+              basePath,
+              {
+                limit: 1000,
+
+                sortBy: {
+                  column:
+                    "created_at",
+
+                  order:
+                    "desc",
+                },
+              }
+            );
+
+        if (error) {
+          console.error(
+            `Error leyendo ${folder}:`,
+            error
+          );
+
+          continue;
+        }
+
+        for (
+          const item of
+          data || []
+        ) {
+          if (
+            !item?.name ||
+            !item?.id
+          ) {
+            continue;
+          }
+
+          const path =
+            `${basePath}/${item.name}`;
+
+          const signed =
+            await supabase.storage
+              .from(
+                "memorias"
+              )
+              .createSignedUrl(
+                path,
+                60 * 60
+              );
+
+          if (
+            signed.error
+          ) {
+            console.error(
+              "No se pudo crear URL:",
+              signed.error
+            );
+
+            continue;
+          }
+
+          const mime =
+            item?.metadata
+              ?.mimetype ||
+            item?.metadata
+              ?.contentType ||
+            guessMimeFromName(
+              item.name
+            );
+
+          collected.push({
+            ...item,
+
+            path,
+
+            folder,
+
+            url:
+              signed.data
+                ?.signedUrl ||
+              "",
+
+            mime,
+          });
+        }
+      }
+
+      collected.sort(
+        (a, b) => {
+          const da =
+            new Date(
+              a.created_at ||
+                a.updated_at ||
+                0
+            ).getTime();
+
+          const db =
+            new Date(
+              b.created_at ||
+                b.updated_at ||
+                0
+            ).getTime();
+
+          return db - da;
+        }
+      );
+
+      setMediaFiles(
+        collected
+      );
+
+      return collected;
+    } catch (error) {
+      console.error(
+        "Error cargando archivos:",
+        error
+      );
+
+      return [];
+    } finally {
+      setMediaLoading(
+        false
+      );
+    }
   }
 
   async function analyzeWithEditor(
@@ -459,9 +599,17 @@ export default function Home() {
       return false;
     }
 
-    setLoading(true);
-    setEditorError("");
-    setEditorProposal(null);
+    setLoading(
+      true
+    );
+
+    setEditorError(
+      ""
+    );
+
+    setEditorProposal(
+      null
+    );
 
     try {
       const memoryText =
@@ -472,24 +620,27 @@ export default function Home() {
           savedStory,
 
         error,
-      } = await supabase
-        .from("stories")
-        .insert({
-          project_id:
-            project.id,
+      } =
+        await supabase
+          .from(
+            "stories"
+          )
+          .insert({
+            project_id:
+              project.id,
 
-          title:
-            title.trim() ||
-            "Recuerdo sin título",
+            title:
+              title.trim() ||
+              "Recuerdo sin título",
 
-          original_text:
-            memoryText,
+            original_text:
+              memoryText,
 
-          source_type:
-            "written",
-        })
-        .select()
-        .single();
+            source_type:
+              "written",
+          })
+          .select()
+          .single();
 
       if (error) {
         throw error;
@@ -509,7 +660,9 @@ export default function Home() {
         memoryText
       );
 
-      setLoading(false);
+      setLoading(
+        false
+      );
 
       flash(
         "Recuerdo guardado. La IA Editora lo está analizando."
@@ -530,7 +683,9 @@ export default function Home() {
 
       return true;
     } catch (error) {
-      setLoading(false);
+      setLoading(
+        false
+      );
 
       flash(
         "No se pudo guardar: " +
@@ -555,13 +710,16 @@ export default function Home() {
 
     const {
       error,
-    } = await supabase
-      .from("stories")
-      .delete()
-      .eq(
-        "id",
-        id
-      );
+    } =
+      await supabase
+        .from(
+          "stories"
+        )
+        .delete()
+        .eq(
+          "id",
+          id
+        );
 
     if (error) {
       flash(
@@ -584,7 +742,9 @@ export default function Home() {
     value
   ) {
     setEditorProposal(
-      (previous) => ({
+      (
+        previous
+      ) => ({
         ...previous,
 
         proposed_text:
@@ -630,8 +790,12 @@ export default function Home() {
   ) {
     let result =
       await supabase
-        .from("chapters")
-        .insert(row);
+        .from(
+          "chapters"
+        )
+        .insert(
+          row
+        );
 
     if (
       result.error &&
@@ -647,7 +811,9 @@ export default function Home() {
 
       result =
         await supabase
-          .from("chapters")
+          .from(
+            "chapters"
+          )
           .insert(
             fallback
           );
@@ -679,7 +845,9 @@ export default function Home() {
       return;
     }
 
-    setLoading(true);
+    setLoading(
+      true
+    );
 
     try {
       let targetChapter =
@@ -691,7 +859,9 @@ export default function Home() {
       ) {
         targetChapter =
           chapters.find(
-            (chapter) =>
+            (
+              chapter
+            ) =>
               String(
                 chapter.id
               ) ===
@@ -712,7 +882,9 @@ export default function Home() {
       ) {
         targetChapter =
           chapters.find(
-            (chapter) =>
+            (
+              chapter
+            ) =>
               normalizeText(
                 chapter.title
               ) ===
@@ -733,16 +905,19 @@ export default function Home() {
 
         const {
           error,
-        } = await supabase
-          .from("chapters")
-          .update({
-            content:
-              updatedContent,
-          })
-          .eq(
-            "id",
-            targetChapter.id
-          );
+        } =
+          await supabase
+            .from(
+              "chapters"
+            )
+            .update({
+              content:
+                updatedContent,
+            })
+            .eq(
+              "id",
+              targetChapter.id
+            );
 
         if (error) {
           throw error;
@@ -795,7 +970,9 @@ export default function Home() {
           error.message
       );
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
@@ -850,9 +1027,13 @@ export default function Home() {
     value
   ) {
     setChapters(
-      (previous) =>
+      (
+        previous
+      ) =>
         previous.map(
-          (chapter) =>
+          (
+            chapter
+          ) =>
             chapter.id ===
             id
               ? {
@@ -867,23 +1048,21 @@ export default function Home() {
 
     const {
       error,
-    } = await supabase
-      .from("chapters")
-      .update({
-        [field]:
-          value,
-      })
-      .eq(
-        "id",
-        id
-      );
+    } =
+      await supabase
+        .from(
+          "chapters"
+        )
+        .update({
+          [field]:
+            value,
+        })
+        .eq(
+          "id",
+          id
+        );
 
     if (error) {
-      console.error(
-        "Error actualizando capítulo:",
-        error
-      );
-
       flash(
         "No se pudo actualizar el capítulo."
       );
@@ -904,13 +1083,16 @@ export default function Home() {
 
     const {
       error,
-    } = await supabase
-      .from("chapters")
-      .delete()
-      .eq(
-        "id",
-        id
-      );
+    } =
+      await supabase
+        .from(
+          "chapters"
+        )
+        .delete()
+        .eq(
+          "id",
+          id
+        );
 
     if (error) {
       flash(
@@ -951,6 +1133,7 @@ export default function Home() {
 
       return {
         uploaded: 0,
+
         failed:
           files.length,
       };
@@ -976,8 +1159,7 @@ export default function Home() {
 
       try {
         if (
-          !file ||
-          !file.name
+          !file?.name
         ) {
           throw new Error(
             "Archivo inválido."
@@ -1000,35 +1182,18 @@ export default function Home() {
 
         const uniqueId =
           `${Date.now()}-${index}-${Math.random()
-            .toString(36)
+            .toString(
+              36
+            )
             .slice(
               2,
               10
             )}`;
 
-        const folder =
-          String(
-            project.id
-          );
-
         const path =
-          `${folder}/${type}/${uniqueId}-${cleanName}`;
-
-        console.log(
-          "Subiendo:",
-          {
-            name:
-              file.name,
-            type:
-              file.type,
-            size:
-              file.size,
-            path,
-          }
-        );
+          `${project.id}/${type}/${uniqueId}-${cleanName}`;
 
         const {
-          data,
           error,
         } =
           await supabase.storage
@@ -1052,11 +1217,6 @@ export default function Home() {
             );
 
         if (error) {
-          console.error(
-            "Supabase Storage rechazó el archivo:",
-            error
-          );
-
           failed++;
 
           errors.push(
@@ -1066,22 +1226,15 @@ export default function Home() {
           continue;
         }
 
-        console.log(
-          "Archivo subido correctamente:",
-          data
-        );
-
         uploaded++;
       } catch (error) {
-        console.error(
-          "Error subiendo archivo:",
-          error
-        );
-
         failed++;
 
         errors.push(
-          `${file?.name || "Archivo"}: ${
+          `${
+            file?.name ||
+            "Archivo"
+          }: ${
             error?.message ||
             "Error desconocido"
           }`
@@ -1091,6 +1244,10 @@ export default function Home() {
 
     setUploadingFiles(
       false
+    );
+
+    await loadMedia(
+      project.id
     );
 
     if (
@@ -1112,13 +1269,12 @@ export default function Home() {
     } else if (
       failed > 0
     ) {
-      const firstError =
-        errors[0] ||
-        "Supabase rechazó la carga.";
-
       flash(
         "No se pudo subir: " +
-          firstError
+          (
+            errors[0] ||
+            "Supabase rechazó la carga."
+          )
       );
     }
 
@@ -1143,7 +1299,7 @@ export default function Home() {
       );
 
     if (
-      files.length === 0
+      !files.length
     ) {
       return;
     }
@@ -1153,12 +1309,55 @@ export default function Home() {
       type
     );
 
-    /*
-     * Esto permite elegir
-     * nuevamente la misma
-     * fotografía o archivo.
-     */
-    input.value = "";
+    input.value =
+      "";
+  }
+
+  async function deleteMedia(
+    item
+  ) {
+    if (
+      !item?.path
+    ) {
+      return;
+    }
+
+    const ok =
+      window.confirm(
+        "¿Eliminar este archivo?"
+      );
+
+    if (!ok) {
+      return;
+    }
+
+    const {
+      error,
+    } =
+      await supabase.storage
+        .from(
+          "memorias"
+        )
+        .remove([
+          item.path,
+        ]);
+
+    if (error) {
+      flash(
+        "No se pudo eliminar: " +
+          error.message
+      );
+
+      return;
+    }
+
+    await loadMedia(
+      project.id
+    );
+
+    flash(
+      "Archivo eliminado."
+    );
   }
 
   function useRecordedTranscript(
@@ -1199,7 +1398,9 @@ export default function Home() {
     value
   ) {
     setDesign(
-      (previous) => ({
+      (
+        previous
+      ) => ({
         ...previous,
 
         [key]:
@@ -1213,7 +1414,9 @@ export default function Home() {
     value
   ) {
     setTexts(
-      (previous) => ({
+      (
+        previous
+      ) => ({
         ...previous,
 
         [key]:
@@ -1442,6 +1645,9 @@ export default function Home() {
             chapterCount={
               chapters.length
             }
+            mediaCount={
+              mediaFiles.length
+            }
             goHistory={() =>
               setActive(
                 "Mi Historia"
@@ -1557,7 +1763,8 @@ export default function Home() {
             description="Familia, amigos, socios, amores y todas las personas importantes de la historia."
           >
             <div className="emptyPanel">
-              Próximamente vas a poder relacionar cada persona con recuerdos, capítulos, fotos y audios.
+              Próximamente vas a poder relacionar cada persona con recuerdos,
+              capítulos, fotos y audios.
             </div>
           </SimplePage>
         )}
@@ -1571,6 +1778,12 @@ export default function Home() {
             chapters={
               chapters
             }
+            mediaFiles={
+              mediaFiles
+            }
+            mediaLoading={
+              mediaLoading
+            }
             mediaInput={
               mediaInput
             }
@@ -1579,6 +1792,14 @@ export default function Home() {
             }
             uploadingFiles={
               uploadingFiles
+            }
+            deleteMedia={
+              deleteMedia
+            }
+            refreshMedia={() =>
+              loadMedia(
+                project?.id
+              )
             }
           />
         )}
@@ -2004,8 +2225,130 @@ body.nqs-lock {
   font-size: 12px;
 }
 
-@media(max-width:800px) {
+.mediaToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 18px;
+  flex-wrap: wrap;
+}
 
+.mediaToolbar h2 {
+  margin: 0;
+  font-family: var(--title-font);
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.mediaToolbarActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.mediaCard {
+  position: relative;
+  min-height: 210px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+.mediaThumb {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  display: block;
+  background: #111;
+}
+
+.mediaVideo {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  background: #111;
+}
+
+.mediaFilePlaceholder {
+  aspect-ratio: 1/1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--secondary);
+  background: rgba(0,0,0,.22);
+  font-size: 13px;
+}
+
+.mediaMeta {
+  padding: 12px 13px 14px;
+}
+
+.mediaName {
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mediaType {
+  color: var(--secondary);
+  font-size: 10px;
+  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+
+.mediaActions {
+  display: flex;
+  gap: 8px;
+  padding: 0 13px 13px;
+}
+
+.mediaActions a,
+.mediaActions button {
+  flex: 1;
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.2);
+  color: var(--text);
+  font-size: 11px;
+  text-decoration: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mediaActions button {
+  color: #e8abab;
+}
+
+.mediaEmpty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 34px;
+  color: var(--secondary);
+  text-align: center;
+}
+
+@media(max-width:1100px) {
+  .mediaGrid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+}
+
+@media(max-width:800px) {
   .nqsRecorderTitle {
     font-size: 34px;
   }
@@ -2037,19 +2380,23 @@ body.nqs-lock {
     font-size: 21px;
   }
 
-  .nqsImmersiveBottom {
-    flex-direction: column;
-  }
-
-  .nqsDraftResume {
-    flex-direction: column;
-  }
-
+  .nqsImmersiveBottom,
+  .nqsDraftResume,
   .designTop {
     flex-direction: column;
   }
 
   .designGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .mediaGrid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:520px) {
+  .mediaGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -2303,7 +2650,9 @@ function VoiceRecorder({
         newRecorder
       );
 
-      setSeconds(0);
+      setSeconds(
+        0
+      );
 
       setStatus(
         "recording"
@@ -2313,7 +2662,9 @@ function VoiceRecorder({
         setInterval(
           () => {
             setSeconds(
-              (previous) =>
+              (
+                previous
+              ) =>
                 previous +
                 1
             );
@@ -2360,7 +2711,9 @@ function VoiceRecorder({
         setInterval(
           () => {
             setSeconds(
-              (previous) =>
+              (
+                previous
+              ) =>
                 previous +
                 1
             );
@@ -2391,7 +2744,9 @@ function VoiceRecorder({
       true
     );
 
-    setError("");
+    setError(
+      ""
+    );
 
     try {
       const form =
@@ -2500,7 +2855,6 @@ function VoiceRecorder({
 
       <div className="nqsRecorderBody">
         <div className="nqsRecorderCard">
-
           <div
             className={
               status ===
@@ -2517,7 +2871,8 @@ function VoiceRecorder({
           </h1>
 
           <p className="nqsRecorderSubtitle">
-            Hablá como si se lo estuvieras contando a una persona. Después lo convertimos en texto y Claude lo transforma en material para el libro.
+            Hablá como si se lo estuvieras contando a una persona. Después lo
+            convertimos en texto y Claude lo transforma en material para el libro.
           </p>
 
           {status !==
@@ -2544,7 +2899,6 @@ function VoiceRecorder({
           {status ===
             "recording" && (
             <div className="nqsRecorderActions">
-
               <button
                 className="nqsRecButton nqsRecSecondary"
                 onClick={
@@ -2562,14 +2916,12 @@ function VoiceRecorder({
               >
                 ■ Finalizar
               </button>
-
             </div>
           )}
 
           {status ===
             "paused" && (
             <div className="nqsRecorderActions">
-
               <button
                 className="nqsRecButton nqsRecPrimary"
                 onClick={
@@ -2587,7 +2939,6 @@ function VoiceRecorder({
               >
                 ■ Finalizar
               </button>
-
             </div>
           )}
 
@@ -2611,7 +2962,6 @@ function VoiceRecorder({
                     24,
                 }}
               >
-
                 <button
                   className="nqsRecButton nqsRecSecondary"
                   onClick={
@@ -2634,7 +2984,6 @@ function VoiceRecorder({
                     ? "Transcribiendo..."
                     : "Usar este audio"}
                 </button>
-
               </div>
             </>
           )}
@@ -2670,7 +3019,6 @@ function VoiceRecorder({
               Convirtiendo la voz en texto…
             </p>
           )}
-
         </div>
       </div>
     </div>,
@@ -2683,6 +3031,7 @@ function HomePage({
   updateText,
   storyCount,
   chapterCount,
+  mediaCount,
   goHistory,
   goBook,
   openRecorder,
@@ -2693,7 +3042,6 @@ function HomePage({
   return (
     <>
       <section className="hero">
-
         <div className="eyebrow">
           PROYECTO BIOGRÁFICO
         </div>
@@ -2727,7 +3075,6 @@ function HomePage({
         />
 
         <div className="mainActions">
-
           <button
             className="primaryButton hugeButton"
             onClick={
@@ -2745,12 +3092,10 @@ function HomePage({
           >
             🎙 Contarlo con audio
           </button>
-
         </div>
       </section>
 
       <section className="workflow">
-
         <Workflow
           n="01"
           title="Contás un recuerdo"
@@ -2779,13 +3124,10 @@ function HomePage({
         >
           Revisás la propuesta y recién entonces la incorporás al manuscrito.
         </Workflow>
-
       </section>
 
       <section className="homeStats">
-
         <div className="stat">
-
           <small>
             RECUERDOS
           </small>
@@ -2793,11 +3135,9 @@ function HomePage({
           <strong>
             {storyCount}
           </strong>
-
         </div>
 
         <div className="stat">
-
           <small>
             CAPÍTULOS
           </small>
@@ -2805,7 +3145,16 @@ function HomePage({
           <strong>
             {chapterCount}
           </strong>
+        </div>
 
+        <div className="stat">
+          <small>
+            ARCHIVOS
+          </small>
+
+          <strong>
+            {mediaCount}
+          </strong>
         </div>
 
         <button
@@ -2822,11 +3171,9 @@ function HomePage({
             Ver cómo va quedando →
           </strong>
         </button>
-
       </section>
 
       <section className="quickArchive">
-
         <button
           className="uploadQuick"
           disabled={
@@ -2840,12 +3187,6 @@ function HomePage({
             ? "Subiendo archivos..."
             : "+ Agregar fotos, documentos o videos"}
         </button>
-
-        {uploadingFiles && (
-          <span className="uploadingMessage">
-            Guardando en Supabase…
-          </span>
-        )}
 
         <input
           ref={
@@ -2862,7 +3203,6 @@ function HomePage({
             )
           }
         />
-
       </section>
     </>
   );
@@ -2875,7 +3215,6 @@ function Workflow({
 }) {
   return (
     <div className="workflowCard">
-
       <span>
         {n}
       </span>
@@ -2887,7 +3226,6 @@ function Workflow({
       <p>
         {children}
       </p>
-
     </div>
   );
 }
@@ -3034,7 +3372,6 @@ function HistoryPage({
 
   return (
     <section className="page">
-
       {portalReady &&
         immersive &&
         createPortal(
@@ -3105,11 +3442,8 @@ function HistoryPage({
       />
 
       <div className="historyLayout">
-
         <div className="storyWriter">
-
           <div className="writerHeader">
-
             <span>
               NUEVO RECUERDO
             </span>
@@ -3122,7 +3456,6 @@ function HistoryPage({
             >
               🎙 Grabar audio
             </button>
-
           </div>
 
           <input
@@ -3157,7 +3490,6 @@ function HistoryPage({
           />
 
           <div className="writerBottom">
-
             <span>
               Tocá el cuadro para escribir en pantalla completa.
             </span>
@@ -3172,13 +3504,10 @@ function HistoryPage({
             >
               Escribir
             </button>
-
           </div>
-
         </div>
 
         <aside className="historyHelp">
-
           <span>
             PODRÍAS CONTAR
           </span>
@@ -3198,16 +3527,12 @@ function HistoryPage({
           <button>
             ¿Cuál fue una decisión que cambió tu vida?
           </button>
-
         </aside>
-
       </div>
 
       {text.trim() && (
         <div className="nqsDraftResume">
-
           <div className="nqsDraftResumeInfo">
-
             <span>
               BORRADOR EN CURSO
             </span>
@@ -3223,7 +3548,6 @@ function HistoryPage({
               )}{" "}
               palabras · guardado automáticamente
             </small>
-
           </div>
 
           <button
@@ -3236,7 +3560,6 @@ function HistoryPage({
           >
             Continuar escribiendo
           </button>
-
         </div>
       )}
 
@@ -3265,11 +3588,8 @@ function HistoryPage({
       />
 
       <div className="savedSection">
-
         <div className="sectionHeader">
-
           <div>
-
             <span className="eyebrow">
               ARCHIVO REAL
             </span>
@@ -3277,13 +3597,11 @@ function HistoryPage({
             <h2>
               Recuerdos guardados
             </h2>
-
           </div>
 
           <strong>
             {stories.length}
           </strong>
-
         </div>
 
         {stories.length ===
@@ -3293,20 +3611,18 @@ function HistoryPage({
           </div>
         ) : (
           <div className="storiesList">
-
             {stories.map(
-              (story) => (
+              (
+                story
+              ) => (
                 <article
                   className="storyCard"
                   key={
                     story.id
                   }
                 >
-
                   <div className="storyTop">
-
                     <div>
-
                       <h3>
                         {story.title ||
                           "Recuerdo"}
@@ -3317,7 +3633,6 @@ function HistoryPage({
                           story.created_at
                         )}
                       </small>
-
                     </div>
 
                     <button
@@ -3330,7 +3645,6 @@ function HistoryPage({
                     >
                       Eliminar
                     </button>
-
                   </div>
 
                   <p>
@@ -3338,16 +3652,12 @@ function HistoryPage({
                       story.original_text
                     }
                   </p>
-
                 </article>
               )
             )}
-
           </div>
         )}
-
       </div>
-
     </section>
   );
 }
@@ -3400,9 +3710,7 @@ function ImmersiveWriter({
 
   return (
     <div className="nqsImmersiveOverlay">
-
       <header className="nqsImmersiveTop">
-
         <button
           onClick={
             close
@@ -3412,7 +3720,6 @@ function ImmersiveWriter({
         </button>
 
         <div className="nqsImmersiveBrand">
-
           <strong>
             NO SE QUIEN SOY
           </strong>
@@ -3420,19 +3727,15 @@ function ImmersiveWriter({
           <small>
             ESCRITURA
           </small>
-
         </div>
 
         <div className="nqsImmersiveSaved">
           Borrador guardado
         </div>
-
       </header>
 
       <div className="nqsImmersiveScroll">
-
         <main className="nqsImmersivePage">
-
           <div className="nqsImmersiveEyebrow">
             NUEVO RECUERDO
           </div>
@@ -3467,9 +3770,7 @@ function ImmersiveWriter({
           />
 
           <div className="nqsImmersiveBottom">
-
             <div>
-
               <strong
                 style={{
                   color:
@@ -3481,11 +3782,9 @@ function ImmersiveWriter({
                 )}{" "}
                 palabras
               </strong>
-
             </div>
 
             <div className="nqsRecorderActions">
-
               <button
                 className="nqsRecButton nqsRecSecondary"
                 onClick={
@@ -3512,15 +3811,10 @@ function ImmersiveWriter({
                     ? "IA analizando..."
                     : "Guardar recuerdo"}
               </button>
-
             </div>
-
           </div>
-
         </main>
-
       </div>
-
     </div>
   );
 }
@@ -3579,7 +3873,6 @@ function EditorPanel({
   ) {
     return (
       <section style={panel}>
-
         <h2>
           No se pudo analizar
         </h2>
@@ -3596,14 +3889,12 @@ function EditorPanel({
         >
           Volver a intentar
         </button>
-
       </section>
     );
   }
 
   return (
     <section style={panel}>
-
       <div className="eyebrow">
         IA EDITORA · PROPUESTA
       </div>
@@ -3684,7 +3975,6 @@ function EditorPanel({
             "wrap",
         }}
       >
-
         <button
           className="primaryButton"
           onClick={
@@ -3711,9 +4001,7 @@ function EditorPanel({
         >
           Descartar
         </button>
-
       </div>
-
     </section>
   );
 }
@@ -3729,7 +4017,6 @@ function BookPage({
 }) {
   return (
     <section className="page">
-
       <div className="eyebrow">
         MANUSCRITO
       </div>
@@ -3763,9 +4050,7 @@ function BookPage({
       />
 
       <div className="bookStatus">
-
         <div>
-
           <small>
             MATERIAL ORIGINAL
           </small>
@@ -3773,11 +4058,9 @@ function BookPage({
           <strong>
             {stories.length} recuerdos
           </strong>
-
         </div>
 
         <div>
-
           <small>
             MANUSCRITO
           </small>
@@ -3785,7 +4068,6 @@ function BookPage({
           <strong>
             {chapters.length} capítulos
           </strong>
-
         </div>
 
         <button
@@ -3796,21 +4078,17 @@ function BookPage({
         >
           + Nuevo capítulo
         </button>
-
       </div>
 
       {chapters.length ===
       0 ? (
         <div className="bookEmpty">
-
           <h2>
             El libro todavía está esperando su primer capítulo.
           </h2>
-
         </div>
       ) : (
         <div className="chapters">
-
           {chapters.map(
             (
               chapter,
@@ -3842,10 +4120,8 @@ function BookPage({
               />
             )
           )}
-
         </div>
       )}
-
     </section>
   );
 }
@@ -3944,7 +4220,9 @@ function ChapterEditor({
 
                 chapter: {
                   ...chapter,
+
                   title,
+
                   content,
                 },
 
@@ -4011,7 +4289,6 @@ function ChapterEditor({
 
   return (
     <article className="chapterEditor">
-
       <div className="chapterNumber">
         CAPÍTULO{" "}
         {String(
@@ -4075,7 +4352,6 @@ function ChapterEditor({
             14,
         }}
       >
-
         <div className="eyebrow">
           IA EDITORA · CLAUDE
         </div>
@@ -4092,7 +4368,6 @@ function ChapterEditor({
               8,
           }}
         >
-
           {[
             [
               "improve",
@@ -4151,7 +4426,6 @@ function ChapterEditor({
               </button>
             )
           )}
-
         </div>
 
         {aiLoading && (
@@ -4173,7 +4447,6 @@ function ChapterEditor({
                 18,
             }}
           >
-
             <textarea
               className="chapterContent"
               value={
@@ -4215,14 +4488,11 @@ function ChapterEditor({
             >
               Descartar
             </button>
-
           </div>
         )}
-
       </div>
 
       <div className="chapterFooter">
-
         <span>
           Los cambios se guardan al salir del texto.
         </span>
@@ -4236,9 +4506,7 @@ function ChapterEditor({
         >
           Eliminar capítulo
         </button>
-
       </div>
-
     </article>
   );
 }
@@ -4246,19 +4514,40 @@ function ChapterEditor({
 function ArchivePage({
   stories,
   chapters,
+  mediaFiles,
+  mediaLoading,
   mediaInput,
   handleMediaInput,
   uploadingFiles,
+  deleteMedia,
+  refreshMedia,
 }) {
+  const photosAndVideos =
+    mediaFiles.filter(
+      (item) =>
+        item.mime?.startsWith(
+          "image/"
+        ) ||
+        item.mime?.startsWith(
+          "video/"
+        )
+    );
+
+  const audios =
+    mediaFiles.filter(
+      (item) =>
+        item.mime?.startsWith(
+          "audio/"
+        )
+    );
+
   return (
     <SimplePage
       eyebrow="ARCHIVO GENERAL"
       title="Archivo"
       description="Todo el material original de la historia en un mismo lugar."
     >
-
       <div className="archiveGrid">
-
         <ArchiveCard
           title="Recuerdos"
           number={
@@ -4275,35 +4564,54 @@ function ArchivePage({
 
         <ArchiveCard
           title="Audios"
-          number="—"
+          number={
+            audios.length
+          }
         />
 
         <ArchiveCard
           title="Fotos y videos"
-          number="—"
+          number={
+            photosAndVideos.length
+          }
         />
-
       </div>
 
-      <button
-        className="primaryButton archiveUpload"
-        disabled={
-          uploadingFiles
-        }
-        onClick={() =>
-          mediaInput.current?.click()
-        }
-      >
-        {uploadingFiles
-          ? "Subiendo..."
-          : "+ Subir fotos, videos o archivos"}
-      </button>
+      <div className="mediaToolbar">
+        <h2>
+          Fotos, videos y archivos
+        </h2>
 
-      {uploadingFiles && (
-        <div className="uploadingMessage">
-          Guardando archivos en Supabase…
+        <div className="mediaToolbarActions">
+          <button
+            className="secondaryButton"
+            disabled={
+              mediaLoading
+            }
+            onClick={
+              refreshMedia
+            }
+          >
+            {mediaLoading
+              ? "Actualizando..."
+              : "Actualizar"}
+          </button>
+
+          <button
+            className="primaryButton"
+            disabled={
+              uploadingFiles
+            }
+            onClick={() =>
+              mediaInput.current?.click()
+            }
+          >
+            {uploadingFiles
+              ? "Subiendo..."
+              : "+ Subir archivos"}
+          </button>
         </div>
-      )}
+      </div>
 
       <input
         ref={
@@ -4321,7 +4629,168 @@ function ArchivePage({
         }
       />
 
+      {mediaLoading ? (
+        <div className="mediaEmpty">
+          Cargando archivo…
+        </div>
+      ) : mediaFiles.length ===
+        0 ? (
+        <div className="mediaEmpty">
+          Todavía no hay archivos visibles. Si acabás de subirlos, tocá “Actualizar”.
+        </div>
+      ) : (
+        <div className="mediaGrid">
+          {mediaFiles.map(
+            (item) => (
+              <MediaCard
+                key={
+                  item.path
+                }
+                item={
+                  item
+                }
+                onDelete={() =>
+                  deleteMedia(
+                    item
+                  )
+                }
+              />
+            )
+          )}
+        </div>
+      )}
     </SimplePage>
+  );
+}
+
+function MediaCard({
+  item,
+  onDelete,
+}) {
+  const isImage =
+    item.mime?.startsWith(
+      "image/"
+    );
+
+  const isVideo =
+    item.mime?.startsWith(
+      "video/"
+    );
+
+  const isAudio =
+    item.mime?.startsWith(
+      "audio/"
+    );
+
+  return (
+    <article className="mediaCard">
+      {isImage ? (
+        <img
+          className="mediaThumb"
+          src={
+            item.url
+          }
+          alt={
+            item.name
+          }
+        />
+      ) : isVideo ? (
+        <video
+          className="mediaVideo"
+          controls
+          preload="metadata"
+          src={
+            item.url
+          }
+        />
+      ) : isAudio ? (
+        <div className="mediaFilePlaceholder">
+          <div>
+            <div
+              style={{
+                fontSize:
+                  34,
+
+                marginBottom:
+                  12,
+              }}
+            >
+              🎙
+            </div>
+
+            <audio
+              controls
+              src={
+                item.url
+              }
+              style={{
+                width:
+                  "100%",
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="mediaFilePlaceholder">
+          <div>
+            <div
+              style={{
+                fontSize:
+                  38,
+
+                marginBottom:
+                  10,
+              }}
+            >
+              ▣
+            </div>
+
+            Archivo
+          </div>
+        </div>
+      )}
+
+      <div className="mediaMeta">
+        <div
+          className="mediaName"
+          title={
+            item.name
+          }
+        >
+          {cleanDisplayName(
+            item.name
+          )}
+        </div>
+
+        <div className="mediaType">
+          {item.folder}
+          {" · "}
+          {friendlyMime(
+            item.mime
+          )}
+        </div>
+      </div>
+
+      <div className="mediaActions">
+        <a
+          href={
+            item.url
+          }
+          target="_blank"
+          rel="noreferrer"
+        >
+          Abrir
+        </a>
+
+        <button
+          onClick={
+            onDelete
+          }
+        >
+          Eliminar
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -4334,7 +4803,6 @@ function PodcastPage({
 }) {
   return (
     <section className="page">
-
       <div className="eyebrow">
         AUDIO · CONTENIDO
       </div>
@@ -4368,9 +4836,7 @@ function PodcastPage({
       />
 
       <div className="podcastGrid">
-
         <div className="podcastCard">
-
           <h2>
             Crear desde la historia
           </h2>
@@ -4378,11 +4844,9 @@ function PodcastPage({
           <p>
             Más adelante podrás elegir un recuerdo o capítulo y convertirlo en un guion.
           </p>
-
         </div>
 
         <div className="podcastCard">
-
           <h2>
             Subir un podcast
           </h2>
@@ -4415,11 +4879,8 @@ function PodcastPage({
               )
             }
           />
-
         </div>
-
       </div>
-
     </section>
   );
 }
@@ -4433,11 +4894,8 @@ function DesignPage({
 }) {
   return (
     <section className="page">
-
       <div className="designTop">
-
         <div>
-
           <div className="eyebrow">
             PERSONALIZACIÓN
           </div>
@@ -4449,7 +4907,6 @@ function DesignPage({
           <p className="pageSubtitle">
             Personalizá completamente la apariencia de NO SE QUIEN SOY. Todos los cambios se guardan automáticamente.
           </p>
-
         </div>
 
         <button
@@ -4460,13 +4917,10 @@ function DesignPage({
         >
           Restaurar diseño PREMIUM
         </button>
-
       </div>
 
       <div className="designGrid">
-
         <DesignGroup title="Fondo general">
-
           <ColorField
             label="Color de fondo"
             value={
@@ -4481,7 +4935,6 @@ function DesignPage({
           />
 
           <div className="field">
-
             <label>
               Imagen de fondo
             </label>
@@ -4520,7 +4973,6 @@ function DesignPage({
                 uploadBackground
               }
             />
-
           </div>
 
           <RangeField
@@ -4562,11 +5014,9 @@ function DesignPage({
               )
             }
           />
-
         </DesignGroup>
 
         <DesignGroup title="Paleta de colores">
-
           <ColorField
             label="Color principal"
             value={
@@ -4644,11 +5094,9 @@ function DesignPage({
               )
             }
           />
-
         </DesignGroup>
 
         <DesignGroup title="Tarjetas y paneles">
-
           <RangeField
             label="Transparencia"
             value={
@@ -4708,11 +5156,9 @@ function DesignPage({
               )
             }
           />
-
         </DesignGroup>
 
         <DesignGroup title="Estructura">
-
           <RangeField
             label="Ancho del menú lateral"
             value={
@@ -4752,11 +5198,9 @@ function DesignPage({
               )
             }
           />
-
         </DesignGroup>
 
         <DesignGroup title="Tipografía">
-
           <SelectField
             label="Fuente de títulos"
             value={
@@ -4792,11 +5236,9 @@ function DesignPage({
               )
             }
           />
-
         </DesignGroup>
 
         <DesignGroup title="Vista previa">
-
           <div
             className="designPreview"
             style={{
@@ -4814,7 +5256,6 @@ function DesignPage({
                 design.border,
             }}
           >
-
             <div
               style={{
                 color:
@@ -4895,13 +5336,9 @@ function DesignPage({
             >
               Botón de ejemplo
             </button>
-
           </div>
-
         </DesignGroup>
-
       </div>
-
     </section>
   );
 }
@@ -4956,7 +5393,6 @@ function SimplePage({
 }) {
   return (
     <section className="page">
-
       <div className="eyebrow">
         {eyebrow}
       </div>
@@ -4972,7 +5408,6 @@ function SimplePage({
       <div className="pageBody">
         {children}
       </div>
-
     </section>
   );
 }
@@ -4983,7 +5418,6 @@ function ArchiveCard({
 }) {
   return (
     <div className="archiveCard">
-
       <span>
         {title}
       </span>
@@ -4991,7 +5425,6 @@ function ArchiveCard({
       <strong>
         {number}
       </strong>
-
     </div>
   );
 }
@@ -5002,13 +5435,11 @@ function DesignGroup({
 }) {
   return (
     <div className="designGroup">
-
       <h3>
         {title}
       </h3>
 
       {children}
-
     </div>
   );
 }
@@ -5020,13 +5451,11 @@ function ColorField({
 }) {
   return (
     <div className="field">
-
       <label>
         {label}
       </label>
 
       <div className="colorField">
-
         <input
           type="color"
           value={
@@ -5042,9 +5471,7 @@ function ColorField({
         <span>
           {value}
         </span>
-
       </div>
-
     </div>
   );
 }
@@ -5059,9 +5486,7 @@ function RangeField({
 }) {
   return (
     <div className="field">
-
       <div className="fieldTop">
-
         <label>
           {label}
         </label>
@@ -5070,7 +5495,6 @@ function RangeField({
           {value}
           {suffix}
         </span>
-
       </div>
 
       <input
@@ -5092,7 +5516,6 @@ function RangeField({
           )
         }
       />
-
     </div>
   );
 }
@@ -5105,7 +5528,6 @@ function SelectField({
 }) {
   return (
     <div className="field">
-
       <label>
         {label}
       </label>
@@ -5121,7 +5543,9 @@ function SelectField({
         }
       >
         {options.map(
-          (option) => (
+          (
+            option
+          ) => (
             <option
               key={
                 option
@@ -5135,8 +5559,121 @@ function SelectField({
           )
         )}
       </select>
-
     </div>
+  );
+}
+
+function guessMimeFromName(
+  name = ""
+) {
+  const ext =
+    name
+      .split(".")
+      .pop()
+      ?.toLowerCase();
+
+  const map = {
+    jpg:
+      "image/jpeg",
+
+    jpeg:
+      "image/jpeg",
+
+    png:
+      "image/png",
+
+    webp:
+      "image/webp",
+
+    gif:
+      "image/gif",
+
+    heic:
+      "image/heic",
+
+    heif:
+      "image/heif",
+
+    mov:
+      "video/quicktime",
+
+    mp4:
+      "video/mp4",
+
+    m4v:
+      "video/x-m4v",
+
+    webm:
+      "video/webm",
+
+    mp3:
+      "audio/mpeg",
+
+    m4a:
+      "audio/mp4",
+
+    wav:
+      "audio/wav",
+
+    pdf:
+      "application/pdf",
+
+    doc:
+      "application/msword",
+
+    docx:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+
+  return (
+    map[ext] ||
+    "application/octet-stream"
+  );
+}
+
+function friendlyMime(
+  mime = ""
+) {
+  if (
+    mime.startsWith(
+      "image/"
+    )
+  ) {
+    return "Foto";
+  }
+
+  if (
+    mime.startsWith(
+      "video/"
+    )
+  ) {
+    return "Video";
+  }
+
+  if (
+    mime.startsWith(
+      "audio/"
+    )
+  ) {
+    return "Audio";
+  }
+
+  if (
+    mime ===
+    "application/pdf"
+  ) {
+    return "PDF";
+  }
+
+  return "Archivo";
+}
+
+function cleanDisplayName(
+  name = ""
+) {
+  return name.replace(
+    /^\d+-\d+-[a-z0-9]+-/i,
+    ""
   );
 }
 
