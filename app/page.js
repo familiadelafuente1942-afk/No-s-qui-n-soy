@@ -108,6 +108,24 @@ export default function Home() {
 
   /*
   ===========================
+  IA EDITORA
+  ===========================
+  */
+
+  const [editorLoading, setEditorLoading] =
+    useState(false);
+
+  const [editorProposal, setEditorProposal] =
+    useState(null);
+
+  const [editorError, setEditorError] =
+    useState("");
+
+  const [lastMemory, setLastMemory] =
+    useState("");
+
+  /*
+  ===========================
   CARGA INICIAL
   ===========================
   */
@@ -252,6 +270,8 @@ export default function Home() {
     }
 
     setStories(data || []);
+
+    return data || [];
   }
 
   async function loadChapters(
@@ -275,6 +295,324 @@ export default function Home() {
     }
 
     setChapters(data || []);
+
+    return data || [];
+  }
+
+  /*
+  ===========================
+  IA EDITORA
+  ===========================
+  */
+
+  async function analyzeWithEditor(
+    memoryText,
+    currentStories = stories,
+    currentChapters = chapters
+  ) {
+    if (!memoryText?.trim()) {
+      return;
+    }
+
+    setEditorLoading(true);
+    setEditorError("");
+    setEditorProposal(null);
+
+    try {
+      const response =
+        await fetch(
+          "/api/editor",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              memory:
+                memoryText,
+
+              memories:
+                currentStories ||
+                [],
+
+              chapters:
+                currentChapters ||
+                [],
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Claude no pudo analizar el recuerdo."
+        );
+      }
+
+      setEditorProposal(
+        data.result
+      );
+
+      flash(
+        "La IA Editora terminó de analizar el recuerdo."
+      );
+    } catch (error) {
+      console.error(error);
+
+      setEditorError(
+        error?.message ||
+          "No se pudo conectar con la IA Editora."
+      );
+    } finally {
+      setEditorLoading(
+        false
+      );
+    }
+  }
+
+  function updateEditorText(
+    value
+  ) {
+    setEditorProposal(
+      (prev) => ({
+        ...prev,
+        proposed_text:
+          value,
+      })
+    );
+  }
+
+  function discardEditorProposal() {
+    setEditorProposal(
+      null
+    );
+
+    setEditorError("");
+
+    setLastMemory("");
+  }
+
+  async function retryEditor() {
+    if (!lastMemory) {
+      flash(
+        "No hay un recuerdo para volver a analizar."
+      );
+      return;
+    }
+
+    await analyzeWithEditor(
+      lastMemory,
+      stories,
+      chapters
+    );
+  }
+
+  async function acceptEditorProposal() {
+    if (
+      !editorProposal ||
+      !project?.id
+    ) {
+      return;
+    }
+
+    const proposedText =
+      editorProposal
+        .proposed_text
+        ?.trim();
+
+    if (!proposedText) {
+      flash(
+        "La propuesta no tiene texto."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let targetChapter =
+        null;
+
+      /*
+      Primero intenta encontrar
+      capítulo por ID.
+      */
+
+      if (
+        editorProposal
+          .chapter_id
+      ) {
+        targetChapter =
+          chapters.find(
+            (chapter) =>
+              String(
+                chapter.id
+              ) ===
+              String(
+                editorProposal
+                  .chapter_id
+              )
+          ) || null;
+      }
+
+      /*
+      Si Claude no devolvió ID,
+      intenta encontrarlo por título.
+      */
+
+      if (
+        !targetChapter &&
+        editorProposal
+          .recommended_action ===
+          "existing_chapter" &&
+        editorProposal
+          .chapter_title
+      ) {
+        targetChapter =
+          chapters.find(
+            (chapter) =>
+              normalizeText(
+                chapter.title
+              ) ===
+              normalizeText(
+                editorProposal
+                  .chapter_title
+              )
+          ) || null;
+      }
+
+      /*
+      CAPÍTULO EXISTENTE
+      */
+
+      if (targetChapter) {
+        const previousContent =
+          targetChapter
+            .content || "";
+
+        const updatedContent =
+          previousContent
+            ? `${previousContent}\n\n${proposedText}`
+            : proposedText;
+
+        const {
+          error,
+        } =
+          await supabase
+            .from(
+              "chapters"
+            )
+            .update({
+              content:
+                updatedContent,
+            })
+            .eq(
+              "id",
+              targetChapter.id
+            );
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        /*
+        CAPÍTULO NUEVO
+        */
+
+        const nextNumber =
+          chapters.length +
+          1;
+
+        const {
+          error,
+        } =
+          await supabase
+            .from(
+              "chapters"
+            )
+            .insert({
+              project_id:
+                project.id,
+
+              chapter_number:
+                nextNumber,
+
+              title:
+                editorProposal
+                  .chapter_title ||
+                `Capítulo ${nextNumber}`,
+
+              content:
+                proposedText,
+            });
+
+        if (error) {
+          /*
+          Compatibilidad por si
+          chapter_number no existe.
+          */
+
+          const fallback =
+            await supabase
+              .from(
+                "chapters"
+              )
+              .insert({
+                project_id:
+                  project.id,
+
+                title:
+                  editorProposal
+                    .chapter_title ||
+                  `Capítulo ${nextNumber}`,
+
+                content:
+                  proposedText,
+              });
+
+          if (
+            fallback.error
+          ) {
+            throw fallback.error;
+          }
+        }
+      }
+
+      await loadChapters(
+        project.id
+      );
+
+      setEditorProposal(
+        null
+      );
+
+      setEditorError("");
+
+      setLastMemory("");
+
+      flash(
+        "La propuesta fue incorporada al libro."
+      );
+
+      setActive(
+        "El Libro"
+      );
+    } catch (error) {
+      console.error(error);
+
+      flash(
+        "No se pudo incorporar al libro: " +
+          error.message
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   /*
@@ -291,6 +629,7 @@ export default function Home() {
       flash(
         "Escribí el recuerdo antes de guardarlo."
       );
+
       return false;
     }
 
@@ -298,48 +637,96 @@ export default function Home() {
       flash(
         "El proyecto todavía no está listo."
       );
+
       return false;
     }
 
     setLoading(true);
+    setEditorError("");
+    setEditorProposal(
+      null
+    );
 
-    const { error } =
-      await supabase
-        .from("stories")
-        .insert({
-          project_id:
-            project.id,
+    try {
+      const memoryText =
+        text.trim();
 
-          title:
-            title.trim() ||
-            "Recuerdo sin título",
+      const {
+        data: savedStory,
+        error,
+      } =
+        await supabase
+          .from("stories")
+          .insert({
+            project_id:
+              project.id,
 
-          original_text:
-            text.trim(),
+            title:
+              title.trim() ||
+              "Recuerdo sin título",
 
-          source_type:
-            "written",
-        });
+            original_text:
+              memoryText,
 
-    setLoading(false);
+            source_type:
+              "written",
+          })
+          .select()
+          .single();
 
-    if (error) {
+      if (error) {
+        throw error;
+      }
+
+      const refreshedStories =
+        await loadStories(
+          project.id
+        );
+
+      const refreshedChapters =
+        await loadChapters(
+          project.id
+        );
+
+      setLastMemory(
+        memoryText
+      );
+
+      flash(
+        "Recuerdo guardado. La IA Editora lo está analizando."
+      );
+
+      setLoading(false);
+
+      /*
+      El recuerdo YA ESTÁ GUARDADO.
+      Ahora entra Claude.
+      */
+
+      await analyzeWithEditor(
+        memoryText,
+        refreshedStories ||
+          [
+            savedStory,
+            ...stories,
+          ],
+        refreshedChapters ||
+          chapters
+      );
+
+      return true;
+    } catch (error) {
+      console.error(error);
+
+      setLoading(false);
+
       flash(
         "No se pudo guardar: " +
           error.message
       );
+
       return false;
     }
-
-    await loadStories(
-      project.id
-    );
-
-    flash(
-      "Recuerdo guardado."
-    );
-
-    return true;
   }
 
   async function deleteStory(
@@ -359,12 +746,18 @@ export default function Home() {
         .eq("id", id);
 
     if (error) {
-      flash(error.message);
+      flash(
+        error.message
+      );
       return;
     }
 
     await loadStories(
       project.id
+    );
+
+    flash(
+      "Recuerdo eliminado."
     );
   }
 
@@ -375,17 +768,22 @@ export default function Home() {
   */
 
   async function createChapter() {
-    if (!project?.id) return;
+    if (!project?.id) {
+      return;
+    }
 
     const number =
       chapters.length + 1;
 
-    const { error } =
+    let result =
       await supabase
         .from("chapters")
         .insert({
           project_id:
             project.id,
+
+          chapter_number:
+            number,
 
           title:
             `Capítulo ${number}`,
@@ -393,11 +791,34 @@ export default function Home() {
           content: "",
         });
 
-    if (error) {
+    /*
+    Compatibilidad si la tabla
+    no tiene chapter_number.
+    */
+
+    if (result.error) {
+      result =
+        await supabase
+          .from(
+            "chapters"
+          )
+          .insert({
+            project_id:
+              project.id,
+
+            title:
+              `Capítulo ${number}`,
+
+            content: "",
+          });
+    }
+
+    if (result.error) {
       flash(
         "No se pudo crear el capítulo: " +
-          error.message
+          result.error.message
       );
+
       return;
     }
 
@@ -415,15 +836,18 @@ export default function Home() {
     field,
     value
   ) {
-    setChapters((prev) =>
-      prev.map((chapter) =>
-        chapter.id === id
-          ? {
-              ...chapter,
-              [field]: value,
-            }
-          : chapter
-      )
+    setChapters(
+      (prev) =>
+        prev.map(
+          (chapter) =>
+            chapter.id === id
+              ? {
+                  ...chapter,
+                  [field]:
+                    value,
+                }
+              : chapter
+        )
     );
 
     const { error } =
@@ -436,6 +860,7 @@ export default function Home() {
 
     if (error) {
       console.error(error);
+
       flash(
         "No se pudo actualizar el capítulo."
       );
@@ -459,12 +884,19 @@ export default function Home() {
         .eq("id", id);
 
     if (error) {
-      flash(error.message);
+      flash(
+        error.message
+      );
+
       return;
     }
 
     await loadChapters(
       project.id
+    );
+
+    flash(
+      "Capítulo eliminado."
     );
   }
 
@@ -478,32 +910,42 @@ export default function Home() {
     files,
     type = "archivo"
   ) {
-    if (!files?.length) return;
+    if (!files?.length) {
+      return;
+    }
 
     let uploaded = 0;
 
-    for (const file of files) {
+    for (
+      const file of files
+    ) {
       try {
         const cleanName =
-          file.name
-            .replace(
-              /[^a-zA-Z0-9._-]/g,
-              "_"
-            );
+          file.name.replace(
+            /[^a-zA-Z0-9._-]/g,
+            "_"
+          );
 
         const path =
           `${Date.now()}-${Math.random()
             .toString(36)
-            .slice(2)}-${cleanName}`;
+            .slice(
+              2
+            )}-${cleanName}`;
 
-        const { error } =
+        const {
+          error,
+        } =
           await supabase.storage
-            .from("memorias")
+            .from(
+              "memorias"
+            )
             .upload(
               path,
               file,
               {
-                upsert: false,
+                upsert:
+                  false,
               }
             );
 
@@ -528,20 +970,24 @@ export default function Home() {
     key,
     value
   ) {
-    setDesign((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setDesign(
+      (prev) => ({
+        ...prev,
+        [key]: value,
+      })
+    );
   }
 
   function updateText(
     key,
     value
   ) {
-    setTexts((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setTexts(
+      (prev) => ({
+        ...prev,
+        [key]: value,
+      })
+    );
   }
 
   function restorePremium() {
@@ -562,31 +1008,40 @@ export default function Home() {
     event
   ) {
     const file =
-      event.target.files?.[0];
+      event.target
+        .files?.[0];
 
     if (!file) return;
 
     const reader =
       new FileReader();
 
-    reader.onload = () => {
-      updateDesign(
-        "backgroundImage",
-        reader.result
-      );
-    };
+    reader.onload =
+      () => {
+        updateDesign(
+          "backgroundImage",
+          reader.result
+        );
+      };
 
     reader.readAsDataURL(
       file
     );
   }
 
-  function flash(message) {
-    setNotice(message);
+  function flash(
+    message
+  ) {
+    setNotice(
+      message
+    );
 
-    setTimeout(() => {
-      setNotice("");
-    }, 2800);
+    setTimeout(
+      () => {
+        setNotice("");
+      },
+      2800
+    );
   }
 
   /*
@@ -650,9 +1105,9 @@ export default function Home() {
       "Arial"
         ? "Arial, Helvetica, sans-serif"
         : design.titleFont ===
-          "Helvetica"
-        ? "Helvetica, Arial, sans-serif"
-        : 'Georgia, "Times New Roman", serif',
+            "Helvetica"
+          ? "Helvetica, Arial, sans-serif"
+          : 'Georgia, "Times New Roman", serif',
 
     "--body-font":
       design.bodyFont ===
@@ -680,7 +1135,9 @@ export default function Home() {
           value={
             texts.projectName
           }
-          onChange={(value) =>
+          onChange={(
+            value
+          ) =>
             updateText(
               "projectName",
               value
@@ -689,21 +1146,28 @@ export default function Home() {
         />
 
         <nav className="navigation">
-          {MENU.map((item) => (
-            <button
-              key={item}
-              className={
-                active === item
-                  ? "navItem active"
-                  : "navItem"
-              }
-              onClick={() =>
-                setActive(item)
-              }
-            >
-              {item}
-            </button>
-          ))}
+          {MENU.map(
+            (item) => (
+              <button
+                key={
+                  item
+                }
+                className={
+                  active ===
+                  item
+                    ? "navItem active"
+                    : "navItem"
+                }
+                onClick={() =>
+                  setActive(
+                    item
+                  )
+                }
+              >
+                {item}
+              </button>
+            )
+          )}
         </nav>
 
         <div className="sidebarFooter">
@@ -712,9 +1176,12 @@ export default function Home() {
       </aside>
 
       <main className="mainContent">
-        {active === "Inicio" && (
+        {active ===
+          "Inicio" && (
           <HomePage
-            texts={texts}
+            texts={
+              texts
+            }
             updateText={
               updateText
             }
@@ -749,11 +1216,15 @@ export default function Home() {
         {active ===
           "Mi Historia" && (
           <HistoryPage
-            texts={texts}
+            texts={
+              texts
+            }
             updateText={
               updateText
             }
-            stories={stories}
+            stories={
+              stories
+            }
             saveStory={
               saveStory
             }
@@ -769,13 +1240,36 @@ export default function Home() {
             uploadFiles={
               uploadFiles
             }
+            editorLoading={
+              editorLoading
+            }
+            editorProposal={
+              editorProposal
+            }
+            editorError={
+              editorError
+            }
+            updateEditorText={
+              updateEditorText
+            }
+            acceptEditorProposal={
+              acceptEditorProposal
+            }
+            discardEditorProposal={
+              discardEditorProposal
+            }
+            retryEditor={
+              retryEditor
+            }
           />
         )}
 
         {active ===
           "El Libro" && (
           <BookPage
-            texts={texts}
+            texts={
+              texts
+            }
             updateText={
               updateText
             }
@@ -835,7 +1329,9 @@ export default function Home() {
         {active ===
           "Podcast" && (
           <PodcastPage
-            texts={texts}
+            texts={
+              texts
+            }
             updateText={
               updateText
             }
@@ -851,7 +1347,9 @@ export default function Home() {
         {active ===
           "Diseño" && (
           <DesignPage
-            design={design}
+            design={
+              design
+            }
             updateDesign={
               updateDesign
             }
@@ -901,7 +1399,9 @@ function HomePage({
           value={
             texts.homeTitle
           }
-          onChange={(value) =>
+          onChange={(
+            value
+          ) =>
             updateText(
               "homeTitle",
               value
@@ -915,7 +1415,9 @@ function HomePage({
           value={
             texts.homeSubtitle
           }
-          onChange={(value) =>
+          onChange={(
+            value
+          ) =>
             updateText(
               "homeSubtitle",
               value
@@ -943,15 +1445,20 @@ function HomePage({
           </button>
 
           <input
-            ref={audioInput}
+            ref={
+              audioInput
+            }
             hidden
             multiple
             type="file"
             accept="audio/*"
-            onChange={(e) =>
+            onChange={(
+              e
+            ) =>
               uploadFiles(
                 Array.from(
-                  e.target.files ||
+                  e.target
+                    .files ||
                     []
                 ),
                 "audio"
@@ -963,10 +1470,14 @@ function HomePage({
 
       <section className="workflow">
         <div className="workflowCard important">
-          <span>01</span>
+          <span>
+            01
+          </span>
+
           <h3>
             Contás un recuerdo
           </h3>
+
           <p>
             Escribís o hablás
             libremente. No hace
@@ -979,14 +1490,18 @@ function HomePage({
         </div>
 
         <div className="workflowCard">
-          <span>02</span>
+          <span>
+            02
+          </span>
+
           <h3>
-            Queda documentado
+            La IA lo analiza
           </h3>
+
           <p>
-            El recuerdo original se
-            conserva dentro de Mi
-            Historia.
+            Claude detecta personas,
+            lugares, períodos y dónde
+            debería entrar en el libro.
           </p>
         </div>
 
@@ -995,13 +1510,18 @@ function HomePage({
         </div>
 
         <div className="workflowCard">
-          <span>03</span>
+          <span>
+            03
+          </span>
+
           <h3>
-            Va formando el libro
+            Vos decidís
           </h3>
+
           <p>
-            La historia narrativa se
-            organiza en capítulos.
+            Revisás la propuesta y
+            recién entonces la
+            incorporás al manuscrito.
           </p>
         </div>
       </section>
@@ -1011,6 +1531,7 @@ function HomePage({
           <small>
             RECUERDOS
           </small>
+
           <strong>
             {storyCount}
           </strong>
@@ -1020,6 +1541,7 @@ function HomePage({
           <small>
             CAPÍTULOS
           </small>
+
           <strong>
             {chapterCount}
           </strong>
@@ -1027,15 +1549,16 @@ function HomePage({
 
         <button
           className="openBook"
-          onClick={goBook}
+          onClick={
+            goBook
+          }
         >
           <span>
             EL LIBRO
           </span>
 
           <strong>
-            Ver cómo va quedando
-            →
+            Ver cómo va quedando →
           </strong>
         </button>
       </section>
@@ -1052,15 +1575,20 @@ function HomePage({
         </button>
 
         <input
-          ref={mediaInput}
+          ref={
+            mediaInput
+          }
           hidden
           multiple
           type="file"
           accept="image/*,video/*,.pdf,.doc,.docx"
-          onChange={(e) =>
+          onChange={(
+            e
+          ) =>
             uploadFiles(
               Array.from(
-                e.target.files ||
+                e.target
+                  .files ||
                   []
               )
             )
@@ -1086,6 +1614,14 @@ function HistoryPage({
   loading,
   audioInput,
   uploadFiles,
+
+  editorLoading,
+  editorProposal,
+  editorError,
+  updateEditorText,
+  acceptEditorProposal,
+  discardEditorProposal,
+  retryEditor,
 }) {
   const [title, setTitle] =
     useState("");
@@ -1118,7 +1654,9 @@ function HistoryPage({
         value={
           texts.historyTitle
         }
-        onChange={(value) =>
+        onChange={(
+          value
+        ) =>
           updateText(
             "historyTitle",
             value
@@ -1132,7 +1670,9 @@ function HistoryPage({
         value={
           texts.historySubtitle
         }
-        onChange={(value) =>
+        onChange={(
+          value
+        ) =>
           updateText(
             "historySubtitle",
             value
@@ -1150,1101 +1690,4 @@ function HistoryPage({
             <button
               className="audioMini"
               onClick={() =>
-                audioInput.current?.click()
-              }
-            >
-              ● Grabar / subir audio
-            </button>
-          </div>
-
-          <input
-            className="storyTitleInput"
-            value={title}
-            onChange={(e) =>
-              setTitle(
-                e.target.value
-              )
-            }
-            placeholder="Título opcional"
-          />
-
-          <textarea
-            className="storyTextarea"
-            value={text}
-            onChange={(e) =>
-              setText(
-                e.target.value
-              )
-            }
-            placeholder="Escribí el recuerdo como te venga a la memoria..."
-          />
-
-          <div className="writerBottom">
-            <span>
-              No hace falta escribir
-              como un libro. Contalo
-              como ocurrió.
-            </span>
-
-            <button
-              className="primaryButton"
-              disabled={
-                loading
-              }
-              onClick={save}
-            >
-              {loading
-                ? "Guardando..."
-                : "Guardar recuerdo"}
-            </button>
-          </div>
-
-          <input
-            ref={audioInput}
-            hidden
-            multiple
-            type="file"
-            accept="audio/*"
-            onChange={(e) =>
-              uploadFiles(
-                Array.from(
-                  e.target.files ||
-                    []
-                ),
-                "audio"
-              )
-            }
-          />
-        </div>
-
-        <aside className="historyHelp">
-          <span>
-            PODRÍAS CONTAR
-          </span>
-
-          <button>
-            ¿Cuál es tu primer
-            recuerdo?
-          </button>
-
-          <button>
-            ¿Cómo era la casa donde
-            creciste?
-          </button>
-
-          <button>
-            ¿Quién marcó tu
-            infancia?
-          </button>
-
-          <button>
-            ¿Cuál fue una decisión
-            que cambió tu vida?
-          </button>
-        </aside>
-      </div>
-
-      <div className="savedSection">
-        <div className="sectionHeader">
-          <div>
-            <span className="eyebrow">
-              ARCHIVO REAL
-            </span>
-
-            <h2>
-              Recuerdos guardados
-            </h2>
-          </div>
-
-          <strong>
-            {stories.length}
-          </strong>
-        </div>
-
-        {stories.length ===
-        0 ? (
-          <div className="emptyPanel">
-            Todavía no hay
-            recuerdos. El primero
-            puede empezar con una
-            frase.
-          </div>
-        ) : (
-          <div className="storiesList">
-            {stories.map(
-              (story) => (
-                <article
-                  className="storyCard"
-                  key={
-                    story.id
-                  }
-                >
-                  <div className="storyTop">
-                    <div>
-                      <h3>
-                        {story.title ||
-                          "Recuerdo"}
-                      </h3>
-
-                      <small>
-                        {formatDate(
-                          story.created_at
-                        )}
-                      </small>
-                    </div>
-
-                    <button
-                      className="deleteButton"
-                      onClick={() =>
-                        deleteStory(
-                          story.id
-                        )
-                      }
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-
-                  <p>
-                    {
-                      story.original_text
-                    }
-                  </p>
-                </article>
-              )
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/*
-================================
-EL LIBRO
-================================
-*/
-
-function BookPage({
-  texts,
-  updateText,
-  chapters,
-  createChapter,
-  updateChapter,
-  deleteChapter,
-  stories,
-}) {
-  return (
-    <section className="page">
-      <div className="eyebrow">
-        MANUSCRITO
-      </div>
-
-      <EditableText
-        tag="h1"
-        className="pageTitle"
-        value={
-          texts.bookTitle
-        }
-        onChange={(value) =>
-          updateText(
-            "bookTitle",
-            value
-          )
-        }
-      />
-
-      <EditableText
-        tag="p"
-        className="pageSubtitle"
-        value={
-          texts.bookSubtitle
-        }
-        onChange={(value) =>
-          updateText(
-            "bookSubtitle",
-            value
-          )
-        }
-      />
-
-      <div className="bookStatus">
-        <div>
-          <small>
-            MATERIAL ORIGINAL
-          </small>
-
-          <strong>
-            {stories.length} recuerdos
-          </strong>
-        </div>
-
-        <div>
-          <small>
-            MANUSCRITO
-          </small>
-
-          <strong>
-            {chapters.length} capítulos
-          </strong>
-        </div>
-
-        <button
-          className="primaryButton"
-          onClick={
-            createChapter
-          }
-        >
-          + Nuevo capítulo
-        </button>
-      </div>
-
-      {chapters.length ===
-      0 ? (
-        <div className="bookEmpty">
-          <span>
-            NO SE QUIEN SOY
-          </span>
-
-          <h2>
-            El libro todavía está
-            esperando su primer
-            capítulo.
-          </h2>
-
-          <p>
-            Los recuerdos originales
-            están en “Mi Historia”.
-            Acá se va construyendo la
-            versión literaria.
-          </p>
-
-          <button
-            className="primaryButton"
-            onClick={
-              createChapter
-            }
-          >
-            Crear primer capítulo
-          </button>
-        </div>
-      ) : (
-        <div className="chapters">
-          {chapters.map(
-            (chapter, index) => (
-              <ChapterEditor
-                key={
-                  chapter.id
-                }
-                chapter={
-                  chapter
-                }
-                number={
-                  index + 1
-                }
-                updateChapter={
-                  updateChapter
-                }
-                deleteChapter={
-                  deleteChapter
-                }
-              />
-            )
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ChapterEditor({
-  chapter,
-  number,
-  updateChapter,
-  deleteChapter,
-}) {
-  const [title, setTitle] =
-    useState(
-      chapter.title || ""
-    );
-
-  const [content, setContent] =
-    useState(
-      chapter.content || ""
-    );
-
-  useEffect(() => {
-    setTitle(
-      chapter.title || ""
-    );
-
-    setContent(
-      chapter.content || ""
-    );
-  }, [chapter]);
-
-  return (
-    <article className="chapterEditor">
-      <div className="chapterNumber">
-        CAPÍTULO{" "}
-        {String(number).padStart(
-          2,
-          "0"
-        )}
-      </div>
-
-      <input
-        className="chapterTitleInput"
-        value={title}
-        onChange={(e) =>
-          setTitle(
-            e.target.value
-          )
-        }
-        onBlur={() =>
-          updateChapter(
-            chapter.id,
-            "title",
-            title
-          )
-        }
-      />
-
-      <textarea
-        className="chapterContent"
-        value={content}
-        onChange={(e) =>
-          setContent(
-            e.target.value
-          )
-        }
-        onBlur={() =>
-          updateChapter(
-            chapter.id,
-            "content",
-            content
-          )
-        }
-        placeholder="Acá empieza la narración del capítulo..."
-      />
-
-      <div className="chapterFooter">
-        <span>
-          Los cambios se guardan al
-          salir del texto.
-        </span>
-
-        <button
-          onClick={() =>
-            deleteChapter(
-              chapter.id
-            )
-          }
-        >
-          Eliminar capítulo
-        </button>
-      </div>
-    </article>
-  );
-}
-
-/*
-================================
-ARCHIVO
-================================
-*/
-
-function ArchivePage({
-  stories,
-  chapters,
-  mediaInput,
-  uploadFiles,
-}) {
-  return (
-    <SimplePage
-      eyebrow="ARCHIVO GENERAL"
-      title="Archivo"
-      description="Todo el material original de la historia en un mismo lugar."
-    >
-      <div className="archiveGrid">
-        <ArchiveCard
-          title="Recuerdos"
-          number={
-            stories.length
-          }
-        />
-
-        <ArchiveCard
-          title="Capítulos"
-          number={
-            chapters.length
-          }
-        />
-
-        <ArchiveCard
-          title="Audios"
-          number="—"
-        />
-
-        <ArchiveCard
-          title="Fotos y videos"
-          number="—"
-        />
-      </div>
-
-      <button
-        className="primaryButton archiveUpload"
-        onClick={() =>
-          mediaInput.current?.click()
-        }
-      >
-        + Subir material
-      </button>
-
-      <input
-        ref={mediaInput}
-        type="file"
-        hidden
-        multiple
-        accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-        onChange={(e) =>
-          uploadFiles(
-            Array.from(
-              e.target.files ||
-                []
-            )
-          )
-        }
-      />
-    </SimplePage>
-  );
-}
-
-/*
-================================
-PODCAST
-================================
-*/
-
-function PodcastPage({
-  texts,
-  updateText,
-  podcastInput,
-  uploadFiles,
-}) {
-  return (
-    <section className="page">
-      <div className="eyebrow">
-        AUDIO · CONTENIDO
-      </div>
-
-      <EditableText
-        tag="h1"
-        className="pageTitle"
-        value={
-          texts.podcastTitle
-        }
-        onChange={(value) =>
-          updateText(
-            "podcastTitle",
-            value
-          )
-        }
-      />
-
-      <EditableText
-        tag="p"
-        className="pageSubtitle"
-        value={
-          texts.podcastSubtitle
-        }
-        onChange={(value) =>
-          updateText(
-            "podcastSubtitle",
-            value
-          )
-        }
-      />
-
-      <div className="podcastGrid">
-        <div className="podcastCard">
-          <span>
-            NUEVO EPISODIO
-          </span>
-
-          <h2>
-            Crear desde la historia
-          </h2>
-
-          <p>
-            Más adelante podrás
-            elegir un recuerdo o
-            capítulo y convertirlo
-            en un guion para
-            podcast.
-          </p>
-
-          <button className="primaryButton">
-            Crear episodio
-          </button>
-        </div>
-
-        <div className="podcastCard">
-          <span>
-            AUDIO EXISTENTE
-          </span>
-
-          <h2>
-            Subir un podcast
-          </h2>
-
-          <p>
-            Guardá un episodio que
-            ya tengas grabado.
-          </p>
-
-          <button
-            className="secondaryButton"
-            onClick={() =>
-              podcastInput.current?.click()
-            }
-          >
-            Subir audio
-          </button>
-
-          <input
-            ref={podcastInput}
-            hidden
-            type="file"
-            accept="audio/*"
-            onChange={(e) =>
-              uploadFiles(
-                Array.from(
-                  e.target.files ||
-                    []
-                ),
-                "podcast"
-              )
-            }
-          />
-        </div>
-      </div>
-
-      <div className="socialFuture">
-        <span>
-          DISTRIBUCIÓN
-        </span>
-
-        <h3>
-          Instagram · YouTube ·
-          TikTok · Spotify ·
-          Facebook
-        </h3>
-
-        <p>
-          Esta parte la conectamos
-          después de terminar bien
-          el flujo del libro.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/*
-================================
-DISEÑO
-================================
-*/
-
-function DesignPage({
-  design,
-  updateDesign,
-  restorePremium,
-  backgroundInput,
-  uploadBackground,
-}) {
-  return (
-    <section className="page">
-      <div className="designTop">
-        <div>
-          <div className="eyebrow">
-            PERSONALIZACIÓN
-          </div>
-
-          <h1 className="pageTitle">
-            Diseño
-          </h1>
-
-          <p className="pageSubtitle">
-            Los cambios se ven y se
-            guardan automáticamente.
-          </p>
-        </div>
-
-        <button
-          className="secondaryButton"
-          onClick={
-            restorePremium
-          }
-        >
-          Restaurar PREMIUM
-        </button>
-      </div>
-
-      <div className="designGrid">
-        <DesignGroup title="Fondo">
-          <ColorField
-            label="Color"
-            value={
-              design.background
-            }
-            onChange={(value) =>
-              updateDesign(
-                "background",
-                value
-              )
-            }
-          />
-
-          <button
-            className="secondaryButton"
-            onClick={() =>
-              backgroundInput.current?.click()
-            }
-          >
-            Subir imagen de fondo
-          </button>
-
-          <input
-            ref={
-              backgroundInput
-            }
-            hidden
-            type="file"
-            accept="image/*"
-            onChange={
-              uploadBackground
-            }
-          />
-
-          <RangeField
-            label="Visibilidad"
-            value={
-              design.backgroundOpacity
-            }
-            min={0}
-            max={100}
-            suffix="%"
-            onChange={(value) =>
-              updateDesign(
-                "backgroundOpacity",
-                value
-              )
-            }
-          />
-
-          <RangeField
-            label="Desenfoque"
-            value={
-              design.backgroundBlur
-            }
-            min={0}
-            max={30}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "backgroundBlur",
-                value
-              )
-            }
-          />
-        </DesignGroup>
-
-        <DesignGroup title="Colores">
-          <ColorField
-            label="Principal"
-            value={
-              design.accent
-            }
-            onChange={(value) =>
-              updateDesign(
-                "accent",
-                value
-              )
-            }
-          />
-
-          <ColorField
-            label="Texto"
-            value={
-              design.text
-            }
-            onChange={(value) =>
-              updateDesign(
-                "text",
-                value
-              )
-            }
-          />
-
-          <ColorField
-            label="Tarjetas"
-            value={
-              design.card
-            }
-            onChange={(value) =>
-              updateDesign(
-                "card",
-                value
-              )
-            }
-          />
-
-          <ColorField
-            label="Menú"
-            value={
-              design.sidebar
-            }
-            onChange={(value) =>
-              updateDesign(
-                "sidebar",
-                value
-              )
-            }
-          />
-        </DesignGroup>
-
-        <DesignGroup title="Forma">
-          <RangeField
-            label="Redondeo"
-            value={
-              design.radius
-            }
-            min={0}
-            max={40}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "radius",
-                value
-              )
-            }
-          />
-
-          <RangeField
-            label="Transparencia tarjetas"
-            value={
-              design.cardOpacity
-            }
-            min={20}
-            max={100}
-            suffix="%"
-            onChange={(value) =>
-              updateDesign(
-                "cardOpacity",
-                value
-              )
-            }
-          />
-
-          <RangeField
-            label="Ancho del menú"
-            value={
-              design.sidebarWidth
-            }
-            min={200}
-            max={350}
-            suffix=" px"
-            onChange={(value) =>
-              updateDesign(
-                "sidebarWidth",
-                value
-              )
-            }
-          />
-        </DesignGroup>
-
-        <DesignGroup title="Tipografía">
-          <SelectField
-            label="Títulos"
-            value={
-              design.titleFont
-            }
-            options={[
-              "Georgia",
-              "Arial",
-              "Helvetica",
-            ]}
-            onChange={(value) =>
-              updateDesign(
-                "titleFont",
-                value
-              )
-            }
-          />
-
-          <SelectField
-            label="Texto"
-            value={
-              design.bodyFont
-            }
-            options={[
-              "Arial",
-              "Georgia",
-            ]}
-            onChange={(value) =>
-              updateDesign(
-                "bodyFont",
-                value
-              )
-            }
-          />
-        </DesignGroup>
-      </div>
-    </section>
-  );
-}
-
-/*
-================================
-COMPONENTES
-================================
-*/
-
-function EditableText({
-  tag = "div",
-  value,
-  onChange,
-  className = "",
-}) {
-  const Tag = tag;
-
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (
-      ref.current &&
-      ref.current.innerText !==
-        value
-    ) {
-      ref.current.innerText =
-        value;
-    }
-  }, [value]);
-
-  return (
-    <Tag
-      ref={ref}
-      className={
-        `${className} editableText`
-      }
-      contentEditable
-      suppressContentEditableWarning
-      onBlur={(e) =>
-        onChange(
-          e.currentTarget.innerText
-        )
-      }
-    />
-  );
-}
-
-function SimplePage({
-  eyebrow,
-  title,
-  description,
-  children,
-}) {
-  return (
-    <section className="page">
-      <div className="eyebrow">
-        {eyebrow}
-      </div>
-
-      <h1 className="pageTitle">
-        {title}
-      </h1>
-
-      <p className="pageSubtitle">
-        {description}
-      </p>
-
-      <div className="pageBody">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function ArchiveCard({
-  title,
-  number,
-}) {
-  return (
-    <div className="archiveCard">
-      <span>{title}</span>
-
-      <strong>
-        {number}
-      </strong>
-    </div>
-  );
-}
-
-function DesignGroup({
-  title,
-  children,
-}) {
-  return (
-    <div className="designGroup">
-      <h3>{title}</h3>
-      {children}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-}) {
-  return (
-    <div className="field">
-      <label>{label}</label>
-
-      <div className="colorField">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) =>
-            onChange(
-              e.target.value
-            )
-          }
-        />
-
-        <span>
-          {value}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function RangeField({
-  label,
-  value,
-  min,
-  max,
-  suffix,
-  onChange,
-}) {
-  return (
-    <div className="field">
-      <div className="fieldTop">
-        <label>
-          {label}
-        </label>
-
-        <span>
-          {value}
-          {suffix}
-        </span>
-      </div>
-
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) =>
-          onChange(
-            Number(
-              e.target.value
-            )
-          )
-        }
-      />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}) {
-  return (
-    <div className="field">
-      <label>{label}</label>
-
-      <select
-        value={value}
-        onChange={(e) =>
-          onChange(
-            e.target.value
-          )
-        }
-      >
-        {options.map(
-          (option) => (
-            <option
-              key={
-                option
-              }
-              value={
-                option
-              }
-            >
-              {option}
-            </option>
-          )
-        )}
-      </select>
-    </div>
-  );
-}
-
-function formatDate(value) {
-  if (!value) return "";
-
-  try {
-    return new Date(
-      value
-    ).toLocaleDateString(
-      "es-AR",
-      {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      }
-    );
-  } catch {
-    return "";
-  }
-}
-
-function hexToRgba(
-  hex,
-  opacity = 1
-) {
-  const value =
-    hex.replace("#", "");
-
-  const bigint =
-    parseInt(value, 16);
-
-  const r =
-    (bigint >> 16) & 255;
-
-  const g =
-    (bigint >> 8) & 255;
-
-  const b =
-    bigint & 255;
-
-  return `rgba(${r},${g},${b},${opacity})`;
-}
+                audioInput
