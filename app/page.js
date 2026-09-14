@@ -42,20 +42,28 @@ const DEFAULT_DESIGN = {
 
 const DEFAULT_TEXTS = {
   projectName: "NO SE QUIEN SOY",
+
   homeTitle:
     "Una vida. Muchos recuerdos. Un libro.",
+
   homeSubtitle:
     "Contá la historia como la recordás. La aplicación conserva cada recuerdo original y te ayuda a transformarlo en un libro.",
+
   historyTitle:
     "Contá la historia",
+
   historySubtitle:
     "Podés escribir un recuerdo o contarlo con tu propia voz.",
+
   bookTitle:
     "El Libro",
+
   bookSubtitle:
     "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
+
   podcastTitle:
     "Podcast",
+
   podcastSubtitle:
     "Convertí historias, capítulos y recuerdos en episodios de audio.",
 };
@@ -66,9 +74,14 @@ export default function Home() {
     []
   );
 
-  const mediaInput = useRef(null);
-  const backgroundInput = useRef(null);
-  const podcastInput = useRef(null);
+  const mediaInput =
+    useRef(null);
+
+  const backgroundInput =
+    useRef(null);
+
+  const podcastInput =
+    useRef(null);
 
   const [active, setActive] =
     useState("Inicio");
@@ -94,23 +107,40 @@ export default function Home() {
   const [loading, setLoading] =
     useState(false);
 
-  const [editorLoading, setEditorLoading] =
-    useState(false);
+  const [
+    editorLoading,
+    setEditorLoading,
+  ] = useState(false);
 
-  const [editorProposal, setEditorProposal] =
-    useState(null);
+  const [
+    editorProposal,
+    setEditorProposal,
+  ] = useState(null);
 
-  const [editorError, setEditorError] =
-    useState("");
+  const [
+    editorError,
+    setEditorError,
+  ] = useState("");
 
-  const [lastMemory, setLastMemory] =
-    useState("");
+  const [
+    lastMemory,
+    setLastMemory,
+  ] = useState("");
 
-  const [recorderOpen, setRecorderOpen] =
-    useState(false);
+  const [
+    recorderOpen,
+    setRecorderOpen,
+  ] = useState(false);
 
-  const [draftSeed, setDraftSeed] =
-    useState(null);
+  const [
+    draftSeed,
+    setDraftSeed,
+  ] = useState(null);
+
+  const [
+    uploadingFiles,
+    setUploadingFiles,
+  ] = useState(false);
 
   useEffect(() => {
     loadLocalPreferences();
@@ -132,14 +162,18 @@ export default function Home() {
       if (savedDesign) {
         setDesign({
           ...DEFAULT_DESIGN,
-          ...JSON.parse(savedDesign),
+          ...JSON.parse(
+            savedDesign
+          ),
         });
       }
 
       if (savedTexts) {
         setTexts({
           ...DEFAULT_TEXTS,
-          ...JSON.parse(savedTexts),
+          ...JSON.parse(
+            savedTexts
+          ),
         });
       }
     } catch {}
@@ -149,7 +183,9 @@ export default function Home() {
     try {
       localStorage.setItem(
         "nqs_design",
-        JSON.stringify(design)
+        JSON.stringify(
+          design
+        )
       );
     } catch {}
   }, [design]);
@@ -158,7 +194,9 @@ export default function Home() {
     try {
       localStorage.setItem(
         "nqs_texts",
-        JSON.stringify(texts)
+        JSON.stringify(
+          texts
+        )
       );
     } catch {}
   }, [texts]);
@@ -181,7 +219,10 @@ export default function Home() {
         .maybeSingle();
 
       if (error) {
-        console.error(error);
+        console.error(
+          "Error buscando proyecto:",
+          error
+        );
       }
 
       if (!foundProject) {
@@ -203,13 +244,18 @@ export default function Home() {
           created.data;
       }
 
-      setProject(foundProject);
+      setProject(
+        foundProject
+      );
 
-      if (foundProject?.id) {
+      if (
+        foundProject?.id
+      ) {
         await Promise.all([
           loadStories(
             foundProject.id
           ),
+
           loadChapters(
             foundProject.id
           ),
@@ -228,27 +274,38 @@ export default function Home() {
   async function loadStories(
     projectId
   ) {
-    const { data, error } =
-      await supabase
-        .from("stories")
-        .select("*")
-        .eq(
-          "project_id",
-          projectId
-        )
-        .order("created_at", {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("stories")
+      .select("*")
+      .eq(
+        "project_id",
+        projectId
+      )
+      .order(
+        "created_at",
+        {
           ascending: false,
-        });
+        }
+      );
 
     if (error) {
-      console.error(error);
+      console.error(
+        "Error cargando recuerdos:",
+        error
+      );
+
       return [];
     }
 
     const result =
       data || [];
 
-    setStories(result);
+    setStories(
+      result
+    );
 
     return result;
   }
@@ -256,27 +313,38 @@ export default function Home() {
   async function loadChapters(
     projectId
   ) {
-    const { data, error } =
-      await supabase
-        .from("chapters")
-        .select("*")
-        .eq(
-          "project_id",
-          projectId
-        )
-        .order("created_at", {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("chapters")
+      .select("*")
+      .eq(
+        "project_id",
+        projectId
+      )
+      .order(
+        "created_at",
+        {
           ascending: true,
-        });
+        }
+      );
 
     if (error) {
-      console.error(error);
+      console.error(
+        "Error cargando capítulos:",
+        error
+      );
+
       return [];
     }
 
     const result =
       data || [];
 
-    setChapters(result);
+    setChapters(
+      result
+    );
 
     return result;
   }
@@ -286,42 +354,62 @@ export default function Home() {
     currentStories = stories,
     currentChapters = chapters
   ) {
-    if (!memoryText?.trim()) {
+    if (
+      !memoryText?.trim()
+    ) {
       return;
     }
 
-    setEditorLoading(true);
-    setEditorError("");
-    setEditorProposal(null);
+    setEditorLoading(
+      true
+    );
+
+    setEditorError(
+      ""
+    );
+
+    setEditorProposal(
+      null
+    );
 
     try {
       const response =
         await fetch(
           "/api/editor",
           {
-            method: "POST",
+            method:
+              "POST",
+
             headers: {
               "Content-Type":
                 "application/json",
             },
-            body: JSON.stringify({
-              mode: "memory",
-              memory:
-                memoryText,
-              memories:
-                currentStories ||
-                [],
-              chapters:
-                currentChapters ||
-                [],
-            }),
+
+            body:
+              JSON.stringify({
+                mode:
+                  "memory",
+
+                memory:
+                  memoryText,
+
+                memories:
+                  currentStories ||
+                  [],
+
+                chapters:
+                  currentChapters ||
+                  [],
+              }),
           }
         );
 
       const data =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
           data?.error ||
             "Claude no pudo analizar el recuerdo."
@@ -351,17 +439,23 @@ export default function Home() {
     title,
     text,
   }) {
-    if (!text.trim()) {
+    if (
+      !text.trim()
+    ) {
       flash(
         "Escribí el recuerdo antes de guardarlo."
       );
+
       return false;
     }
 
-    if (!project?.id) {
+    if (
+      !project?.id
+    ) {
       flash(
         "El proyecto todavía no está listo."
       );
+
       return false;
     }
 
@@ -374,24 +468,28 @@ export default function Home() {
         text.trim();
 
       const {
-        data: savedStory,
+        data:
+          savedStory,
+
         error,
-      } =
-        await supabase
-          .from("stories")
-          .insert({
-            project_id:
-              project.id,
-            title:
-              title.trim() ||
-              "Recuerdo sin título",
-            original_text:
-              memoryText,
-            source_type:
-              "written",
-          })
-          .select()
-          .single();
+      } = await supabase
+        .from("stories")
+        .insert({
+          project_id:
+            project.id,
+
+          title:
+            title.trim() ||
+            "Recuerdo sin título",
+
+          original_text:
+            memoryText,
+
+          source_type:
+            "written",
+        })
+        .select()
+        .single();
 
       if (error) {
         throw error;
@@ -419,11 +517,13 @@ export default function Home() {
 
       await analyzeWithEditor(
         memoryText,
+
         refreshedStories ||
           [
             savedStory,
             ...stories,
           ],
+
         refreshedChapters ||
           chapters
       );
@@ -449,18 +549,25 @@ export default function Home() {
         "¿Eliminar este recuerdo?"
       );
 
-    if (!ok) return;
+    if (!ok) {
+      return;
+    }
 
-    const { error } =
-      await supabase
-        .from("stories")
-        .delete()
-        .eq("id", id);
+    const {
+      error,
+    } = await supabase
+      .from("stories")
+      .delete()
+      .eq(
+        "id",
+        id
+      );
 
     if (error) {
       flash(
         error.message
       );
+
       return;
     }
 
@@ -479,6 +586,7 @@ export default function Home() {
     setEditorProposal(
       (previous) => ({
         ...previous,
+
         proposed_text:
           value,
       })
@@ -486,16 +594,27 @@ export default function Home() {
   }
 
   function discardEditorProposal() {
-    setEditorProposal(null);
-    setEditorError("");
-    setLastMemory("");
+    setEditorProposal(
+      null
+    );
+
+    setEditorError(
+      ""
+    );
+
+    setLastMemory(
+      ""
+    );
   }
 
   async function retryEditor() {
-    if (!lastMemory) {
+    if (
+      !lastMemory
+    ) {
       flash(
         "No hay un recuerdo para volver a analizar."
       );
+
       return;
     }
 
@@ -529,7 +648,9 @@ export default function Home() {
       result =
         await supabase
           .from("chapters")
-          .insert(fallback);
+          .insert(
+            fallback
+          );
     }
 
     return result;
@@ -548,10 +669,13 @@ export default function Home() {
         .proposed_text
         ?.trim();
 
-    if (!proposedText) {
+    if (
+      !proposedText
+    ) {
       flash(
         "La propuesta no tiene texto."
       );
+
       return;
     }
 
@@ -599,46 +723,55 @@ export default function Home() {
           ) || null;
       }
 
-      if (targetChapter) {
+      if (
+        targetChapter
+      ) {
         const updatedContent =
           targetChapter.content
             ? `${targetChapter.content}\n\n${proposedText}`
             : proposedText;
 
-        const { error } =
-          await supabase
-            .from("chapters")
-            .update({
-              content:
-                updatedContent,
-            })
-            .eq(
-              "id",
-              targetChapter.id
-            );
+        const {
+          error,
+        } = await supabase
+          .from("chapters")
+          .update({
+            content:
+              updatedContent,
+          })
+          .eq(
+            "id",
+            targetChapter.id
+          );
 
         if (error) {
           throw error;
         }
       } else {
         const nextNumber =
-          chapters.length + 1;
+          chapters.length +
+          1;
 
         const result =
           await insertChapter({
             project_id:
               project.id,
+
             chapter_number:
               nextNumber,
+
             title:
               editorProposal
                 .chapter_title ||
               `Capítulo ${nextNumber}`,
+
             content:
               proposedText,
           });
 
-        if (result.error) {
+        if (
+          result.error
+        ) {
           throw result.error;
         }
       }
@@ -667,29 +800,38 @@ export default function Home() {
   }
 
   async function createChapter() {
-    if (!project?.id) {
+    if (
+      !project?.id
+    ) {
       return;
     }
 
     const number =
-      chapters.length + 1;
+      chapters.length +
+      1;
 
     const result =
       await insertChapter({
         project_id:
           project.id,
+
         chapter_number:
           number,
+
         title:
           `Capítulo ${number}`,
+
         content: "",
       });
 
-    if (result.error) {
+    if (
+      result.error
+    ) {
       flash(
         "No se pudo crear el capítulo: " +
           result.error.message
       );
+
       return;
     }
 
@@ -711,9 +853,11 @@ export default function Home() {
       (previous) =>
         previous.map(
           (chapter) =>
-            chapter.id === id
+            chapter.id ===
+            id
               ? {
                   ...chapter,
+
                   [field]:
                     value,
                 }
@@ -721,16 +865,25 @@ export default function Home() {
         )
     );
 
-    const { error } =
-      await supabase
-        .from("chapters")
-        .update({
-          [field]:
-            value,
-        })
-        .eq("id", id);
+    const {
+      error,
+    } = await supabase
+      .from("chapters")
+      .update({
+        [field]:
+          value,
+      })
+      .eq(
+        "id",
+        id
+      );
 
     if (error) {
+      console.error(
+        "Error actualizando capítulo:",
+        error
+      );
+
       flash(
         "No se pudo actualizar el capítulo."
       );
@@ -745,18 +898,25 @@ export default function Home() {
         "¿Eliminar este capítulo?"
       );
 
-    if (!ok) return;
+    if (!ok) {
+      return;
+    }
 
-    const { error } =
-      await supabase
-        .from("chapters")
-        .delete()
-        .eq("id", id);
+    const {
+      error,
+    } = await supabase
+      .from("chapters")
+      .delete()
+      .eq(
+        "id",
+        id
+      );
 
     if (error) {
       flash(
         error.message
       );
+
       return;
     }
 
@@ -773,28 +933,104 @@ export default function Home() {
     files,
     type = "archivo"
   ) {
-    if (!files?.length) {
-      return;
+    if (
+      !files?.length
+    ) {
+      return {
+        uploaded: 0,
+        failed: 0,
+      };
     }
 
-    let uploaded = 0;
+    if (
+      !project?.id
+    ) {
+      flash(
+        "El proyecto todavía no terminó de cargar."
+      );
 
-    for (const file of files) {
+      return {
+        uploaded: 0,
+        failed:
+          files.length,
+      };
+    }
+
+    setUploadingFiles(
+      true
+    );
+
+    let uploaded = 0;
+    let failed = 0;
+
+    const errors = [];
+
+    for (
+      let index = 0;
+      index <
+      files.length;
+      index++
+    ) {
+      const file =
+        files[index];
+
       try {
+        if (
+          !file ||
+          !file.name
+        ) {
+          throw new Error(
+            "Archivo inválido."
+          );
+        }
+
         const cleanName =
-          file.name.replace(
-            /[^a-zA-Z0-9._-]/g,
-            "_"
+          file.name
+            .normalize(
+              "NFD"
+            )
+            .replace(
+              /[\u0300-\u036f]/g,
+              ""
+            )
+            .replace(
+              /[^a-zA-Z0-9._-]/g,
+              "_"
+            );
+
+        const uniqueId =
+          `${Date.now()}-${index}-${Math.random()
+            .toString(36)
+            .slice(
+              2,
+              10
+            )}`;
+
+        const folder =
+          String(
+            project.id
           );
 
         const path =
-          `${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(
-              2
-            )}-${cleanName}`;
+          `${folder}/${type}/${uniqueId}-${cleanName}`;
 
-        const { error } =
+        console.log(
+          "Subiendo:",
+          {
+            name:
+              file.name,
+            type:
+              file.type,
+            size:
+              file.size,
+            path,
+          }
+        );
+
+        const {
+          data,
+          error,
+        } =
           await supabase.storage
             .from(
               "memorias"
@@ -803,20 +1039,126 @@ export default function Home() {
               path,
               file,
               {
+                cacheControl:
+                  "3600",
+
                 upsert:
                   false,
+
+                contentType:
+                  file.type ||
+                  undefined,
               }
             );
 
-        if (!error) {
-          uploaded++;
+        if (error) {
+          console.error(
+            "Supabase Storage rechazó el archivo:",
+            error
+          );
+
+          failed++;
+
+          errors.push(
+            `${file.name}: ${error.message}`
+          );
+
+          continue;
         }
-      } catch {}
+
+        console.log(
+          "Archivo subido correctamente:",
+          data
+        );
+
+        uploaded++;
+      } catch (error) {
+        console.error(
+          "Error subiendo archivo:",
+          error
+        );
+
+        failed++;
+
+        errors.push(
+          `${file?.name || "Archivo"}: ${
+            error?.message ||
+            "Error desconocido"
+          }`
+        );
+      }
     }
 
-    flash(
-      `${uploaded} ${type}(s) subido(s).`
+    setUploadingFiles(
+      false
     );
+
+    if (
+      uploaded > 0 &&
+      failed === 0
+    ) {
+      flash(
+        uploaded === 1
+          ? "Archivo subido correctamente."
+          : `${uploaded} archivos subidos correctamente.`
+      );
+    } else if (
+      uploaded > 0 &&
+      failed > 0
+    ) {
+      flash(
+        `${uploaded} archivos subidos. ${failed} no pudieron cargarse.`
+      );
+    } else if (
+      failed > 0
+    ) {
+      const firstError =
+        errors[0] ||
+        "Supabase rechazó la carga.";
+
+      flash(
+        "No se pudo subir: " +
+          firstError
+      );
+    }
+
+    return {
+      uploaded,
+      failed,
+      errors,
+    };
+  }
+
+  async function handleMediaInput(
+    event,
+    type = "archivo"
+  ) {
+    const input =
+      event.currentTarget;
+
+    const files =
+      Array.from(
+        input.files ||
+          []
+      );
+
+    if (
+      files.length === 0
+    ) {
+      return;
+    }
+
+    await uploadFiles(
+      files,
+      type
+    );
+
+    /*
+     * Esto permite elegir
+     * nuevamente la misma
+     * fotografía o archivo.
+     */
+    input.value = "";
   }
 
   function useRecordedTranscript(
@@ -831,9 +1173,12 @@ export default function Home() {
     }
 
     setDraftSeed({
-      id: Date.now(),
+      id:
+        Date.now(),
+
       text:
-        transcript || "",
+        transcript ||
+        "",
     });
 
     setActive(
@@ -856,6 +1201,7 @@ export default function Home() {
     setDesign(
       (previous) => ({
         ...previous,
+
         [key]:
           value,
       })
@@ -869,6 +1215,7 @@ export default function Home() {
     setTexts(
       (previous) => ({
         ...previous,
+
         [key]:
           value,
       })
@@ -896,21 +1243,27 @@ export default function Home() {
       event.target
         .files?.[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     const reader =
       new FileReader();
 
-    reader.onload = () => {
-      updateDesign(
-        "backgroundImage",
-        reader.result
-      );
-    };
+    reader.onload =
+      () => {
+        updateDesign(
+          "backgroundImage",
+          reader.result
+        );
+      };
 
     reader.readAsDataURL(
       file
     );
+
+    event.target.value =
+      "";
   }
 
   function flash(
@@ -922,9 +1275,11 @@ export default function Home() {
 
     setTimeout(
       () => {
-        setNotice("");
+        setNotice(
+          ""
+        );
       },
-      3000
+      4000
     );
   }
 
@@ -991,13 +1346,18 @@ export default function Home() {
       design.bodyFont ===
       "Georgia"
         ? 'Georgia, "Times New Roman", serif'
-        : "Arial, Helvetica, sans-serif",
+        : design.bodyFont ===
+            "Helvetica"
+          ? "Helvetica, Arial, sans-serif"
+          : "Arial, Helvetica, sans-serif",
   };
 
   return (
     <div
       className="appShell"
-      style={variables}
+      style={
+        variables
+      }
     >
       <GlobalOverlayStyles />
 
@@ -1044,7 +1404,8 @@ export default function Home() {
                   item
                 }
                 className={
-                  active === item
+                  active ===
+                  item
                     ? "navItem active"
                     : "navItem"
                 }
@@ -1099,8 +1460,11 @@ export default function Home() {
             mediaInput={
               mediaInput
             }
-            uploadFiles={
-              uploadFiles
+            handleMediaInput={
+              handleMediaInput
+            }
+            uploadingFiles={
+              uploadingFiles
             }
           />
         )}
@@ -1193,11 +1557,7 @@ export default function Home() {
             description="Familia, amigos, socios, amores y todas las personas importantes de la historia."
           >
             <div className="emptyPanel">
-              Próximamente vas a
-              poder relacionar cada
-              persona con recuerdos,
-              capítulos, fotos y
-              audios.
+              Próximamente vas a poder relacionar cada persona con recuerdos, capítulos, fotos y audios.
             </div>
           </SimplePage>
         )}
@@ -1214,8 +1574,11 @@ export default function Home() {
             mediaInput={
               mediaInput
             }
-            uploadFiles={
-              uploadFiles
+            handleMediaInput={
+              handleMediaInput
+            }
+            uploadingFiles={
+              uploadingFiles
             }
           />
         )}
@@ -1232,8 +1595,11 @@ export default function Home() {
             podcastInput={
               podcastInput
             }
-            uploadFiles={
-              uploadFiles
+            handleMediaInput={
+              handleMediaInput
+            }
+            uploadingFiles={
+              uploadingFiles
             }
           />
         )}
@@ -1542,7 +1908,7 @@ body.nqs-lock {
 
 .designGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 18px;
 }
 
@@ -1631,7 +1997,15 @@ body.nqs-lock {
   background: var(--card);
 }
 
+.uploadingMessage {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
 @media(max-width:800px) {
+
   .nqsRecorderTitle {
     font-size: 34px;
   }
@@ -1739,7 +2113,9 @@ function VoiceRecorder({
     useRef(null);
 
   useEffect(() => {
-    setPortalReady(true);
+    setPortalReady(
+      true
+    );
 
     document.documentElement.classList.add(
       "nqs-lock"
@@ -1769,7 +2145,9 @@ function VoiceRecorder({
             track.stop()
         );
 
-      if (audioUrl) {
+      if (
+        audioUrl
+      ) {
         URL.revokeObjectURL(
           audioUrl
         );
@@ -1936,7 +2314,8 @@ function VoiceRecorder({
           () => {
             setSeconds(
               (previous) =>
-                previous + 1
+                previous +
+                1
             );
           },
           1000
@@ -1982,7 +2361,8 @@ function VoiceRecorder({
           () => {
             setSeconds(
               (previous) =>
-                previous + 1
+                previous +
+                1
             );
           },
           1000
@@ -2001,7 +2381,9 @@ function VoiceRecorder({
   }
 
   async function transcribe() {
-    if (!audioFile) {
+    if (
+      !audioFile
+    ) {
       return;
     }
 
@@ -2025,15 +2407,20 @@ function VoiceRecorder({
         await fetch(
           "/api/transcribe",
           {
-            method: "POST",
-            body: form,
+            method:
+              "POST",
+
+            body:
+              form,
           }
         );
 
       const data =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
           data?.error ||
             "No se pudo transcribir el audio."
@@ -2043,7 +2430,9 @@ function VoiceRecorder({
       const transcript =
         data?.text?.trim();
 
-      if (!transcript) {
+      if (
+        !transcript
+      ) {
         throw new Error(
           "La transcripción llegó vacía."
         );
@@ -2084,7 +2473,9 @@ function VoiceRecorder({
     onClose();
   }
 
-  if (!portalReady) {
+  if (
+    !portalReady
+  ) {
     return null;
   }
 
@@ -2109,6 +2500,7 @@ function VoiceRecorder({
 
       <div className="nqsRecorderBody">
         <div className="nqsRecorderCard">
+
           <div
             className={
               status ===
@@ -2125,12 +2517,7 @@ function VoiceRecorder({
           </h1>
 
           <p className="nqsRecorderSubtitle">
-            Hablá como si se lo
-            estuvieras contando a una
-            persona. Después lo
-            convertimos en texto y
-            Claude lo transforma en
-            material para el libro.
+            Hablá como si se lo estuvieras contando a una persona. Después lo convertimos en texto y Claude lo transforma en material para el libro.
           </p>
 
           {status !==
@@ -2157,6 +2544,7 @@ function VoiceRecorder({
           {status ===
             "recording" && (
             <div className="nqsRecorderActions">
+
               <button
                 className="nqsRecButton nqsRecSecondary"
                 onClick={
@@ -2174,12 +2562,14 @@ function VoiceRecorder({
               >
                 ■ Finalizar
               </button>
+
             </div>
           )}
 
           {status ===
             "paused" && (
             <div className="nqsRecorderActions">
+
               <button
                 className="nqsRecButton nqsRecPrimary"
                 onClick={
@@ -2197,6 +2587,7 @@ function VoiceRecorder({
               >
                 ■ Finalizar
               </button>
+
             </div>
           )}
 
@@ -2216,9 +2607,11 @@ function VoiceRecorder({
               <div
                 className="nqsRecorderActions"
                 style={{
-                  marginTop: 24,
+                  marginTop:
+                    24,
                 }}
               >
+
                 <button
                   className="nqsRecButton nqsRecSecondary"
                   onClick={
@@ -2241,6 +2634,7 @@ function VoiceRecorder({
                     ? "Transcribiendo..."
                     : "Usar este audio"}
                 </button>
+
               </div>
             </>
           )}
@@ -2260,8 +2654,7 @@ function VoiceRecorder({
           {status ===
             "recording" && (
             <p className="nqsRecorderStatus">
-              Micrófono activo ·
-              grabando
+              Micrófono activo · grabando
             </p>
           )}
 
@@ -2274,10 +2667,10 @@ function VoiceRecorder({
 
           {transcribing && (
             <p className="nqsRecorderStatus">
-              Convirtiendo la voz en
-              texto…
+              Convirtiendo la voz en texto…
             </p>
           )}
+
         </div>
       </div>
     </div>,
@@ -2294,11 +2687,13 @@ function HomePage({
   goBook,
   openRecorder,
   mediaInput,
-  uploadFiles,
+  handleMediaInput,
+  uploadingFiles,
 }) {
   return (
     <>
       <section className="hero">
+
         <div className="eyebrow">
           PROYECTO BIOGRÁFICO
         </div>
@@ -2332,6 +2727,7 @@ function HomePage({
         />
 
         <div className="mainActions">
+
           <button
             className="primaryButton hugeButton"
             onClick={
@@ -2349,17 +2745,17 @@ function HomePage({
           >
             🎙 Contarlo con audio
           </button>
+
         </div>
       </section>
 
       <section className="workflow">
+
         <Workflow
           n="01"
           title="Contás un recuerdo"
         >
-          Escribís o hablás
-          libremente. No hace falta
-          ordenar nada.
+          Escribís o hablás libremente. No hace falta ordenar nada.
         </Workflow>
 
         <div className="workflowArrow">
@@ -2370,9 +2766,7 @@ function HomePage({
           n="02"
           title="La IA lo analiza"
         >
-          Claude detecta personas,
-          lugares, períodos y dónde
-          debería entrar en el libro.
+          Claude detecta personas, lugares, períodos y dónde debería entrar en el libro.
         </Workflow>
 
         <div className="workflowArrow">
@@ -2383,14 +2777,15 @@ function HomePage({
           n="03"
           title="Vos decidís"
         >
-          Revisás la propuesta y
-          recién entonces la
-          incorporás al manuscrito.
+          Revisás la propuesta y recién entonces la incorporás al manuscrito.
         </Workflow>
+
       </section>
 
       <section className="homeStats">
+
         <div className="stat">
+
           <small>
             RECUERDOS
           </small>
@@ -2398,9 +2793,11 @@ function HomePage({
           <strong>
             {storyCount}
           </strong>
+
         </div>
 
         <div className="stat">
+
           <small>
             CAPÍTULOS
           </small>
@@ -2408,6 +2805,7 @@ function HomePage({
           <strong>
             {chapterCount}
           </strong>
+
         </div>
 
         <button
@@ -2424,18 +2822,30 @@ function HomePage({
             Ver cómo va quedando →
           </strong>
         </button>
+
       </section>
 
       <section className="quickArchive">
+
         <button
           className="uploadQuick"
+          disabled={
+            uploadingFiles
+          }
           onClick={() =>
             mediaInput.current?.click()
           }
         >
-          + Agregar fotos,
-          documentos o videos
+          {uploadingFiles
+            ? "Subiendo archivos..."
+            : "+ Agregar fotos, documentos o videos"}
         </button>
+
+        {uploadingFiles && (
+          <span className="uploadingMessage">
+            Guardando en Supabase…
+          </span>
+        )}
 
         <input
           ref={
@@ -2446,14 +2856,13 @@ function HomePage({
           type="file"
           accept="image/*,video/*,.pdf,.doc,.docx"
           onChange={(event) =>
-            uploadFiles(
-              Array.from(
-                event.target.files ||
-                  []
-              )
+            handleMediaInput(
+              event,
+              "archivo"
             )
           }
         />
+
       </section>
     </>
   );
@@ -2466,9 +2875,19 @@ function Workflow({
 }) {
   return (
     <div className="workflowCard">
-      <span>{n}</span>
-      <h3>{title}</h3>
-      <p>{children}</p>
+
+      <span>
+        {n}
+      </span>
+
+      <h3>
+        {title}
+      </h3>
+
+      <p>
+        {children}
+      </p>
+
     </div>
   );
 }
@@ -2490,11 +2909,15 @@ function HistoryPage({
   retryEditor,
   draftSeed,
 }) {
-  const [title, setTitle] =
-    useState("");
+  const [
+    title,
+    setTitle,
+  ] = useState("");
 
-  const [text, setText] =
-    useState("");
+  const [
+    text,
+    setText,
+  ] = useState("");
 
   const [
     immersive,
@@ -2507,7 +2930,9 @@ function HistoryPage({
   ] = useState(false);
 
   useEffect(() => {
-    setPortalReady(true);
+    setPortalReady(
+      true
+    );
 
     try {
       const savedTitle =
@@ -2520,13 +2945,17 @@ function HistoryPage({
           "nqs_story_draft_text"
         );
 
-      if (savedTitle) {
+      if (
+        savedTitle
+      ) {
         setTitle(
           savedTitle
         );
       }
 
-      if (savedText) {
+      if (
+        savedText
+      ) {
         setText(
           savedText
         );
@@ -2579,9 +3008,17 @@ function HistoryPage({
       });
 
     if (ok) {
-      setTitle("");
-      setText("");
-      setImmersive(false);
+      setTitle(
+        ""
+      );
+
+      setText(
+        ""
+      );
+
+      setImmersive(
+        false
+      );
 
       try {
         localStorage.removeItem(
@@ -2597,15 +3034,20 @@ function HistoryPage({
 
   return (
     <section className="page">
+
       {portalReady &&
         immersive &&
         createPortal(
           <ImmersiveWriter
-            title={title}
+            title={
+              title
+            }
             setTitle={
               setTitle
             }
-            text={text}
+            text={
+              text
+            }
             setText={
               setText
             }
@@ -2614,7 +3056,9 @@ function HistoryPage({
                 false
               )
             }
-            save={save}
+            save={
+              save
+            }
             loading={
               loading
             }
@@ -2661,8 +3105,11 @@ function HistoryPage({
       />
 
       <div className="historyLayout">
+
         <div className="storyWriter">
+
           <div className="writerHeader">
+
             <span>
               NUEVO RECUERDO
             </span>
@@ -2675,11 +3122,14 @@ function HistoryPage({
             >
               🎙 Grabar audio
             </button>
+
           </div>
 
           <input
             className="storyTitleInput"
-            value={title}
+            value={
+              title
+            }
             onChange={(event) =>
               setTitle(
                 event.target.value
@@ -2690,7 +3140,9 @@ function HistoryPage({
 
           <textarea
             className="storyTextarea"
-            value={text}
+            value={
+              text
+            }
             onChange={(event) =>
               setText(
                 event.target.value
@@ -2705,10 +3157,9 @@ function HistoryPage({
           />
 
           <div className="writerBottom">
+
             <span>
-              Tocá el cuadro para
-              escribir en pantalla
-              completa.
+              Tocá el cuadro para escribir en pantalla completa.
             </span>
 
             <button
@@ -2721,39 +3172,42 @@ function HistoryPage({
             >
               Escribir
             </button>
+
           </div>
+
         </div>
 
         <aside className="historyHelp">
+
           <span>
             PODRÍAS CONTAR
           </span>
 
           <button>
-            ¿Cuál es tu primer
-            recuerdo?
+            ¿Cuál es tu primer recuerdo?
           </button>
 
           <button>
-            ¿Cómo era la casa donde
-            creciste?
+            ¿Cómo era la casa donde creciste?
           </button>
 
           <button>
-            ¿Quién marcó tu
-            infancia?
+            ¿Quién marcó tu infancia?
           </button>
 
           <button>
-            ¿Cuál fue una decisión
-            que cambió tu vida?
+            ¿Cuál fue una decisión que cambió tu vida?
           </button>
+
         </aside>
+
       </div>
 
       {text.trim() && (
         <div className="nqsDraftResume">
+
           <div className="nqsDraftResumeInfo">
+
             <span>
               BORRADOR EN CURSO
             </span>
@@ -2767,9 +3221,9 @@ function HistoryPage({
               {countWords(
                 text
               )}{" "}
-              palabras · guardado
-              automáticamente
+              palabras · guardado automáticamente
             </small>
+
           </div>
 
           <button
@@ -2782,6 +3236,7 @@ function HistoryPage({
           >
             Continuar escribiendo
           </button>
+
         </div>
       )}
 
@@ -2810,8 +3265,11 @@ function HistoryPage({
       />
 
       <div className="savedSection">
+
         <div className="sectionHeader">
+
           <div>
+
             <span className="eyebrow">
               ARCHIVO REAL
             </span>
@@ -2819,19 +3277,23 @@ function HistoryPage({
             <h2>
               Recuerdos guardados
             </h2>
+
           </div>
 
           <strong>
             {stories.length}
           </strong>
+
         </div>
 
-        {stories.length === 0 ? (
+        {stories.length ===
+        0 ? (
           <div className="emptyPanel">
             Todavía no hay recuerdos.
           </div>
         ) : (
           <div className="storiesList">
+
             {stories.map(
               (story) => (
                 <article
@@ -2840,8 +3302,11 @@ function HistoryPage({
                     story.id
                   }
                 >
+
                   <div className="storyTop">
+
                     <div>
+
                       <h3>
                         {story.title ||
                           "Recuerdo"}
@@ -2852,6 +3317,7 @@ function HistoryPage({
                           story.created_at
                         )}
                       </small>
+
                     </div>
 
                     <button
@@ -2864,6 +3330,7 @@ function HistoryPage({
                     >
                       Eliminar
                     </button>
+
                   </div>
 
                   <p>
@@ -2871,12 +3338,16 @@ function HistoryPage({
                       story.original_text
                     }
                   </p>
+
                 </article>
               )
             )}
+
           </div>
         )}
+
       </div>
+
     </section>
   );
 }
@@ -2905,9 +3376,12 @@ function ImmersiveWriter({
     );
 
     const timer =
-      setTimeout(() => {
-        textRef.current?.focus();
-      }, 150);
+      setTimeout(
+        () => {
+          textRef.current?.focus();
+        },
+        150
+      );
 
     return () => {
       clearTimeout(
@@ -2926,7 +3400,9 @@ function ImmersiveWriter({
 
   return (
     <div className="nqsImmersiveOverlay">
+
       <header className="nqsImmersiveTop">
+
         <button
           onClick={
             close
@@ -2936,6 +3412,7 @@ function ImmersiveWriter({
         </button>
 
         <div className="nqsImmersiveBrand">
+
           <strong>
             NO SE QUIEN SOY
           </strong>
@@ -2943,22 +3420,28 @@ function ImmersiveWriter({
           <small>
             ESCRITURA
           </small>
+
         </div>
 
         <div className="nqsImmersiveSaved">
           Borrador guardado
         </div>
+
       </header>
 
       <div className="nqsImmersiveScroll">
+
         <main className="nqsImmersivePage">
+
           <div className="nqsImmersiveEyebrow">
             NUEVO RECUERDO
           </div>
 
           <input
             className="nqsImmersiveTitle"
-            value={title}
+            value={
+              title
+            }
             onChange={(event) =>
               setTitle(
                 event.target.value
@@ -2968,9 +3451,13 @@ function ImmersiveWriter({
           />
 
           <textarea
-            ref={textRef}
+            ref={
+              textRef
+            }
             className="nqsImmersiveText"
-            value={text}
+            value={
+              text
+            }
             onChange={(event) =>
               setText(
                 event.target.value
@@ -2980,7 +3467,9 @@ function ImmersiveWriter({
           />
 
           <div className="nqsImmersiveBottom">
+
             <div>
+
               <strong
                 style={{
                   color:
@@ -2992,9 +3481,11 @@ function ImmersiveWriter({
                 )}{" "}
                 palabras
               </strong>
+
             </div>
 
             <div className="nqsRecorderActions">
+
               <button
                 className="nqsRecButton nqsRecSecondary"
                 onClick={
@@ -3021,10 +3512,15 @@ function ImmersiveWriter({
                     ? "IA analizando..."
                     : "Guardar recuerdo"}
               </button>
+
             </div>
+
           </div>
+
         </main>
+
       </div>
+
     </div>
   );
 }
@@ -3047,18 +3543,28 @@ function EditorPanel({
   }
 
   const panel = {
-    marginTop: 28,
-    marginBottom: 38,
-    padding: 28,
+    marginTop:
+      28,
+
+    marginBottom:
+      38,
+
+    padding:
+      28,
+
     border:
       "1px solid var(--border)",
+
     borderRadius:
       "var(--radius)",
+
     background:
       "var(--card)",
   };
 
-  if (loading) {
+  if (
+    loading
+  ) {
     return (
       <section style={panel}>
         <h2>
@@ -3068,34 +3574,42 @@ function EditorPanel({
     );
   }
 
-  if (error) {
+  if (
+    error
+  ) {
     return (
       <section style={panel}>
+
         <h2>
           No se pudo analizar
         </h2>
 
-        <p>{error}</p>
+        <p>
+          {error}
+        </p>
 
         <button
           className="secondaryButton"
-          onClick={retry}
+          onClick={
+            retry
+          }
         >
           Volver a intentar
         </button>
+
       </section>
     );
   }
 
   return (
     <section style={panel}>
+
       <div className="eyebrow">
         IA EDITORA · PROPUESTA
       </div>
 
       <h2>
-        Así podría entrar este
-        recuerdo en el libro
+        Así podría entrar este recuerdo en el libro
       </h2>
 
       {proposal.summary && (
@@ -3120,53 +3634,86 @@ function EditorPanel({
           )
         }
         style={{
-          width: "100%",
-          minHeight: 300,
+          width:
+            "100%",
+
+          minHeight:
+            300,
+
           boxSizing:
             "border-box",
-          marginTop: 10,
-          padding: 20,
+
+          marginTop:
+            10,
+
+          padding:
+            20,
+
           border:
             "1px solid var(--border)",
-          borderRadius: 14,
+
+          borderRadius:
+            14,
+
           background:
             "rgba(0,0,0,.25)",
+
           color:
             "var(--text)",
-          fontSize: 18,
-          lineHeight: 1.7,
+
+          fontSize:
+            18,
+
+          lineHeight:
+            1.7,
         }}
       />
 
       <div
         style={{
-          display: "flex",
-          gap: 12,
-          marginTop: 20,
-          flexWrap: "wrap",
+          display:
+            "flex",
+
+          gap:
+            12,
+
+          marginTop:
+            20,
+
+          flexWrap:
+            "wrap",
         }}
       >
+
         <button
           className="primaryButton"
-          onClick={accept}
+          onClick={
+            accept
+          }
         >
           Aceptar en el libro
         </button>
 
         <button
           className="secondaryButton"
-          onClick={retry}
+          onClick={
+            retry
+          }
         >
           Reescribir con IA
         </button>
 
         <button
           className="secondaryButton"
-          onClick={discard}
+          onClick={
+            discard
+          }
         >
           Descartar
         </button>
+
       </div>
+
     </section>
   );
 }
@@ -3182,6 +3729,7 @@ function BookPage({
 }) {
   return (
     <section className="page">
+
       <div className="eyebrow">
         MANUSCRITO
       </div>
@@ -3215,7 +3763,9 @@ function BookPage({
       />
 
       <div className="bookStatus">
+
         <div>
+
           <small>
             MATERIAL ORIGINAL
           </small>
@@ -3223,9 +3773,11 @@ function BookPage({
           <strong>
             {stories.length} recuerdos
           </strong>
+
         </div>
 
         <div>
+
           <small>
             MANUSCRITO
           </small>
@@ -3233,6 +3785,7 @@ function BookPage({
           <strong>
             {chapters.length} capítulos
           </strong>
+
         </div>
 
         <button
@@ -3243,18 +3796,21 @@ function BookPage({
         >
           + Nuevo capítulo
         </button>
+
       </div>
 
-      {chapters.length === 0 ? (
+      {chapters.length ===
+      0 ? (
         <div className="bookEmpty">
+
           <h2>
-            El libro todavía está
-            esperando su primer
-            capítulo.
+            El libro todavía está esperando su primer capítulo.
           </h2>
+
         </div>
       ) : (
         <div className="chapters">
+
           {chapters.map(
             (
               chapter,
@@ -3268,7 +3824,8 @@ function BookPage({
                   chapter
                 }
                 number={
-                  index + 1
+                  index +
+                  1
                 }
                 updateChapter={
                   updateChapter
@@ -3285,8 +3842,10 @@ function BookPage({
               />
             )
           )}
+
         </div>
       )}
+
     </section>
   );
 }
@@ -3299,76 +3858,110 @@ function ChapterEditor({
   stories,
   chapters,
 }) {
-  const [title, setTitle] =
-    useState(
-      chapter.title || ""
-    );
+  const [
+    title,
+    setTitle,
+  ] = useState(
+    chapter.title ||
+      ""
+  );
 
-  const [content, setContent] =
-    useState(
-      chapter.content || ""
-    );
+  const [
+    content,
+    setContent,
+  ] = useState(
+    chapter.content ||
+      ""
+  );
 
-  const [aiLoading, setAiLoading] =
-    useState(false);
+  const [
+    aiLoading,
+    setAiLoading,
+  ] = useState(false);
 
-  const [aiProposal, setAiProposal] =
-    useState(null);
+  const [
+    aiProposal,
+    setAiProposal,
+  ] = useState(null);
 
-  const [aiError, setAiError] =
-    useState("");
+  const [
+    aiError,
+    setAiError,
+  ] = useState("");
 
   useEffect(() => {
     setTitle(
-      chapter.title || ""
+      chapter.title ||
+        ""
     );
 
     setContent(
-      chapter.content || ""
+      chapter.content ||
+        ""
     );
   }, [chapter]);
 
   async function runAI(
     action
   ) {
-    if (!content.trim()) {
+    if (
+      !content.trim()
+    ) {
       return;
     }
 
-    setAiLoading(true);
-    setAiError("");
-    setAiProposal(null);
+    setAiLoading(
+      true
+    );
+
+    setAiError(
+      ""
+    );
+
+    setAiProposal(
+      null
+    );
 
     try {
       const response =
         await fetch(
           "/api/editor",
           {
-            method: "POST",
+            method:
+              "POST",
+
             headers: {
               "Content-Type":
                 "application/json",
             },
-            body: JSON.stringify({
-              mode:
-                "chapter",
-              action,
-              chapter: {
-                ...chapter,
-                title,
-                content,
-              },
-              memories:
-                stories,
-              chapters,
-            }),
+
+            body:
+              JSON.stringify({
+                mode:
+                  "chapter",
+
+                action,
+
+                chapter: {
+                  ...chapter,
+                  title,
+                  content,
+                },
+
+                memories:
+                  stories,
+
+                chapters,
+              }),
           }
         );
 
       const data =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
           data?.error ||
             "Claude no pudo editar el capítulo."
@@ -3383,7 +3976,9 @@ function ChapterEditor({
         error.message
       );
     } finally {
-      setAiLoading(false);
+      setAiLoading(
+        false
+      );
     }
   }
 
@@ -3393,11 +3988,15 @@ function ChapterEditor({
         ?.proposed_text
         ?.trim();
 
-    if (!newText) {
+    if (
+      !newText
+    ) {
       return;
     }
 
-    setContent(newText);
+    setContent(
+      newText
+    );
 
     await updateChapter(
       chapter.id,
@@ -3405,14 +4004,19 @@ function ChapterEditor({
       newText
     );
 
-    setAiProposal(null);
+    setAiProposal(
+      null
+    );
   }
 
   return (
     <article className="chapterEditor">
+
       <div className="chapterNumber">
         CAPÍTULO{" "}
-        {String(number).padStart(
+        {String(
+          number
+        ).padStart(
           2,
           "0"
         )}
@@ -3420,7 +4024,9 @@ function ChapterEditor({
 
       <input
         className="chapterTitleInput"
-        value={title}
+        value={
+          title
+        }
         onChange={(event) =>
           setTitle(
             event.target.value
@@ -3437,7 +4043,9 @@ function ChapterEditor({
 
       <textarea
         className="chapterContent"
-        value={content}
+        value={
+          content
+        }
         onChange={(event) =>
           setContent(
             event.target.value
@@ -3454,49 +4062,68 @@ function ChapterEditor({
 
       <div
         style={{
-          marginTop: 18,
-          padding: 18,
+          marginTop:
+            18,
+
+          padding:
+            18,
+
           border:
             "1px solid var(--border)",
-          borderRadius: 14,
+
+          borderRadius:
+            14,
         }}
       >
+
         <div className="eyebrow">
           IA EDITORA · CLAUDE
         </div>
 
         <div
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
+            display:
+              "flex",
+
+            flexWrap:
+              "wrap",
+
+            gap:
+              8,
           }}
         >
+
           {[
             [
               "improve",
               "Mejorar redacción",
             ],
+
             [
               "literary",
               "Más literario",
             ],
+
             [
               "emotional",
               "Más emocional",
             ],
+
             [
               "cinematic",
               "Más cinematográfico",
             ],
+
             [
               "expand",
               "Ampliar",
             ],
+
             [
               "shorten",
               "Resumir",
             ],
+
             [
               "coherence",
               "Revisar coherencia",
@@ -3524,6 +4151,7 @@ function ChapterEditor({
               </button>
             )
           )}
+
         </div>
 
         {aiLoading && (
@@ -3541,9 +4169,11 @@ function ChapterEditor({
         {aiProposal && (
           <div
             style={{
-              marginTop: 18,
+              marginTop:
+                18,
             }}
           >
+
             <textarea
               className="chapterContent"
               value={
@@ -3552,10 +4182,15 @@ function ChapterEditor({
               }
               onChange={(event) =>
                 setAiProposal(
-                  (previous) => ({
+                  (
+                    previous
+                  ) => ({
                     ...previous,
+
                     proposed_text:
-                      event.target.value,
+                      event
+                        .target
+                        .value,
                   })
                 )
               }
@@ -3580,14 +4215,16 @@ function ChapterEditor({
             >
               Descartar
             </button>
+
           </div>
         )}
+
       </div>
 
       <div className="chapterFooter">
+
         <span>
-          Los cambios se guardan al
-          salir del texto.
+          Los cambios se guardan al salir del texto.
         </span>
 
         <button
@@ -3599,7 +4236,9 @@ function ChapterEditor({
         >
           Eliminar capítulo
         </button>
+
       </div>
+
     </article>
   );
 }
@@ -3608,7 +4247,8 @@ function ArchivePage({
   stories,
   chapters,
   mediaInput,
-  uploadFiles,
+  handleMediaInput,
+  uploadingFiles,
 }) {
   return (
     <SimplePage
@@ -3616,7 +4256,9 @@ function ArchivePage({
       title="Archivo"
       description="Todo el material original de la historia en un mismo lugar."
     >
+
       <div className="archiveGrid">
+
         <ArchiveCard
           title="Recuerdos"
           number={
@@ -3640,16 +4282,28 @@ function ArchivePage({
           title="Fotos y videos"
           number="—"
         />
+
       </div>
 
       <button
         className="primaryButton archiveUpload"
+        disabled={
+          uploadingFiles
+        }
         onClick={() =>
           mediaInput.current?.click()
         }
       >
-        + Subir material
+        {uploadingFiles
+          ? "Subiendo..."
+          : "+ Subir fotos, videos o archivos"}
       </button>
+
+      {uploadingFiles && (
+        <div className="uploadingMessage">
+          Guardando archivos en Supabase…
+        </div>
+      )}
 
       <input
         ref={
@@ -3660,14 +4314,13 @@ function ArchivePage({
         type="file"
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
         onChange={(event) =>
-          uploadFiles(
-            Array.from(
-              event.target.files ||
-                []
-            )
+          handleMediaInput(
+            event,
+            "archivo"
           )
         }
       />
+
     </SimplePage>
   );
 }
@@ -3676,10 +4329,12 @@ function PodcastPage({
   texts,
   updateText,
   podcastInput,
-  uploadFiles,
+  handleMediaInput,
+  uploadingFiles,
 }) {
   return (
     <section className="page">
+
       <div className="eyebrow">
         AUDIO · CONTENIDO
       </div>
@@ -3713,31 +4368,37 @@ function PodcastPage({
       />
 
       <div className="podcastGrid">
+
         <div className="podcastCard">
+
           <h2>
             Crear desde la historia
           </h2>
 
           <p>
-            Más adelante podrás
-            elegir un recuerdo o
-            capítulo y convertirlo
-            en un guion.
+            Más adelante podrás elegir un recuerdo o capítulo y convertirlo en un guion.
           </p>
+
         </div>
 
         <div className="podcastCard">
+
           <h2>
             Subir un podcast
           </h2>
 
           <button
             className="secondaryButton"
+            disabled={
+              uploadingFiles
+            }
             onClick={() =>
               podcastInput.current?.click()
             }
           >
-            Subir audio
+            {uploadingFiles
+              ? "Subiendo..."
+              : "Subir audio"}
           </button>
 
           <input
@@ -3748,17 +4409,17 @@ function PodcastPage({
             type="file"
             accept="audio/*"
             onChange={(event) =>
-              uploadFiles(
-                Array.from(
-                  event.target.files ||
-                    []
-                ),
+              handleMediaInput(
+                event,
                 "podcast"
               )
             }
           />
+
         </div>
+
       </div>
+
     </section>
   );
 }
@@ -3772,8 +4433,11 @@ function DesignPage({
 }) {
   return (
     <section className="page">
+
       <div className="designTop">
+
         <div>
+
           <div className="eyebrow">
             PERSONALIZACIÓN
           </div>
@@ -3783,9 +4447,9 @@ function DesignPage({
           </h1>
 
           <p className="pageSubtitle">
-            Personalizá completamente la apariencia de NO SE QUIEN SOY.
-            Todos los cambios se guardan automáticamente.
+            Personalizá completamente la apariencia de NO SE QUIEN SOY. Todos los cambios se guardan automáticamente.
           </p>
+
         </div>
 
         <button
@@ -3796,11 +4460,13 @@ function DesignPage({
         >
           Restaurar diseño PREMIUM
         </button>
+
       </div>
 
       <div className="designGrid">
 
         <DesignGroup title="Fondo general">
+
           <ColorField
             label="Color de fondo"
             value={
@@ -3815,6 +4481,7 @@ function DesignPage({
           />
 
           <div className="field">
+
             <label>
               Imagen de fondo
             </label>
@@ -3853,6 +4520,7 @@ function DesignPage({
                 uploadBackground
               }
             />
+
           </div>
 
           <RangeField
@@ -3860,8 +4528,12 @@ function DesignPage({
             value={
               design.backgroundOpacity
             }
-            min={0}
-            max={100}
+            min={
+              0
+            }
+            max={
+              100
+            }
             suffix="%"
             onChange={(value) =>
               updateDesign(
@@ -3876,8 +4548,12 @@ function DesignPage({
             value={
               design.backgroundBlur
             }
-            min={0}
-            max={20}
+            min={
+              0
+            }
+            max={
+              20
+            }
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -3886,9 +4562,11 @@ function DesignPage({
               )
             }
           />
+
         </DesignGroup>
 
         <DesignGroup title="Paleta de colores">
+
           <ColorField
             label="Color principal"
             value={
@@ -3966,16 +4644,22 @@ function DesignPage({
               )
             }
           />
+
         </DesignGroup>
 
         <DesignGroup title="Tarjetas y paneles">
+
           <RangeField
             label="Transparencia"
             value={
               design.cardOpacity
             }
-            min={20}
-            max={100}
+            min={
+              20
+            }
+            max={
+              100
+            }
             suffix="%"
             onChange={(value) =>
               updateDesign(
@@ -3990,8 +4674,12 @@ function DesignPage({
             value={
               design.radius
             }
-            min={0}
-            max={40}
+            min={
+              0
+            }
+            max={
+              40
+            }
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -4006,8 +4694,12 @@ function DesignPage({
             value={
               design.buttonRadius
             }
-            min={0}
-            max={30}
+            min={
+              0
+            }
+            max={
+              30
+            }
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -4016,16 +4708,22 @@ function DesignPage({
               )
             }
           />
+
         </DesignGroup>
 
         <DesignGroup title="Estructura">
+
           <RangeField
             label="Ancho del menú lateral"
             value={
               design.sidebarWidth
             }
-            min={200}
-            max={360}
+            min={
+              200
+            }
+            max={
+              360
+            }
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -4040,8 +4738,12 @@ function DesignPage({
             value={
               design.contentWidth
             }
-            min={800}
-            max={1600}
+            min={
+              800
+            }
+            max={
+              1600
+            }
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -4050,9 +4752,11 @@ function DesignPage({
               )
             }
           />
+
         </DesignGroup>
 
         <DesignGroup title="Tipografía">
+
           <SelectField
             label="Fuente de títulos"
             value={
@@ -4088,9 +4792,11 @@ function DesignPage({
               )
             }
           />
+
         </DesignGroup>
 
         <DesignGroup title="Vista previa">
+
           <div
             className="designPreview"
             style={{
@@ -4100,20 +4806,28 @@ function DesignPage({
                   design.cardOpacity /
                     100
                 ),
+
               borderRadius:
                 `${design.radius}px`,
+
               borderColor:
                 design.border,
             }}
           >
+
             <div
               style={{
                 color:
                   design.accent,
-                fontSize: 10,
+
+                fontSize:
+                  10,
+
                 letterSpacing:
                   ".2em",
-                marginBottom: 12,
+
+                marginBottom:
+                  12,
               }}
             >
               NO SE QUIEN SOY
@@ -4123,13 +4837,18 @@ function DesignPage({
               style={{
                 color:
                   design.text,
+
                 fontFamily:
                   design.titleFont ===
                   "Georgia"
                     ? "Georgia, serif"
                     : `${design.titleFont}, sans-serif`,
-                fontSize: 28,
-                marginBottom: 12,
+
+                fontSize:
+                  28,
+
+                marginBottom:
+                  12,
               }}
             >
               Una historia que merece ser contada
@@ -4139,35 +4858,50 @@ function DesignPage({
               style={{
                 color:
                   design.secondary,
-                lineHeight: 1.6,
+
+                lineHeight:
+                  1.6,
               }}
             >
-              Esta vista te permite ver en tiempo real cómo quedan los colores,
-              la transparencia, los bordes, las tipografías y el estilo general.
+              Esta vista te permite ver en tiempo real cómo quedan los colores, la transparencia, los bordes, las tipografías y el estilo general.
             </p>
 
             <button
               style={{
-                marginTop: 12,
-                minHeight: 44,
+                marginTop:
+                  12,
+
+                minHeight:
+                  44,
+
                 padding:
                   "0 18px",
+
                 border:
                   `1px solid ${design.accent}`,
+
                 borderRadius:
                   `${design.buttonRadius}px`,
+
                 background:
                   design.accent,
-                color: "#111",
-                fontWeight: 700,
+
+                color:
+                  "#111",
+
+                fontWeight:
+                  700,
               }}
             >
               Botón de ejemplo
             </button>
+
           </div>
+
         </DesignGroup>
 
       </div>
+
     </section>
   );
 }
@@ -4222,6 +4956,7 @@ function SimplePage({
 }) {
   return (
     <section className="page">
+
       <div className="eyebrow">
         {eyebrow}
       </div>
@@ -4237,6 +4972,7 @@ function SimplePage({
       <div className="pageBody">
         {children}
       </div>
+
     </section>
   );
 }
@@ -4247,6 +4983,7 @@ function ArchiveCard({
 }) {
   return (
     <div className="archiveCard">
+
       <span>
         {title}
       </span>
@@ -4254,6 +4991,7 @@ function ArchiveCard({
       <strong>
         {number}
       </strong>
+
     </div>
   );
 }
@@ -4264,11 +5002,13 @@ function DesignGroup({
 }) {
   return (
     <div className="designGroup">
+
       <h3>
         {title}
       </h3>
 
       {children}
+
     </div>
   );
 }
@@ -4280,11 +5020,13 @@ function ColorField({
 }) {
   return (
     <div className="field">
+
       <label>
         {label}
       </label>
 
       <div className="colorField">
+
         <input
           type="color"
           value={
@@ -4300,7 +5042,9 @@ function ColorField({
         <span>
           {value}
         </span>
+
       </div>
+
     </div>
   );
 }
@@ -4315,7 +5059,9 @@ function RangeField({
 }) {
   return (
     <div className="field">
+
       <div className="fieldTop">
+
         <label>
           {label}
         </label>
@@ -4324,13 +5070,20 @@ function RangeField({
           {value}
           {suffix}
         </span>
+
       </div>
 
       <input
         type="range"
-        min={min}
-        max={max}
-        value={value}
+        min={
+          min
+        }
+        max={
+          max
+        }
+        value={
+          value
+        }
         onChange={(event) =>
           onChange(
             Number(
@@ -4339,6 +5092,7 @@ function RangeField({
           )
         }
       />
+
     </div>
   );
 }
@@ -4351,12 +5105,15 @@ function SelectField({
 }) {
   return (
     <div className="field">
+
       <label>
         {label}
       </label>
 
       <select
-        value={value}
+        value={
+          value
+        }
         onChange={(event) =>
           onChange(
             event.target.value
@@ -4378,6 +5135,7 @@ function SelectField({
           )
         )}
       </select>
+
     </div>
   );
 }
@@ -4387,16 +5145,23 @@ function countWords(
 ) {
   const text =
     String(
-      value || ""
+      value ||
+        ""
     ).trim();
 
-  if (!text) {
+  if (
+    !text
+  ) {
     return 0;
   }
 
   return text
-    .split(/\s+/)
-    .filter(Boolean)
+    .split(
+      /\s+/
+    )
+    .filter(
+      Boolean
+    )
     .length;
 }
 
@@ -4405,11 +5170,13 @@ function formatTimer(
 ) {
   const minutes =
     Math.floor(
-      totalSeconds / 60
+      totalSeconds /
+        60
     );
 
   const seconds =
-    totalSeconds % 60;
+    totalSeconds %
+    60;
 
   return `${String(
     minutes
@@ -4427,7 +5194,9 @@ function formatTimer(
 function formatDate(
   value
 ) {
-  if (!value) {
+  if (
+    !value
+  ) {
     return "";
   }
 
@@ -4439,8 +5208,10 @@ function formatDate(
       {
         day:
           "2-digit",
+
         month:
           "long",
+
         year:
           "numeric",
       }
@@ -4454,11 +5225,14 @@ function normalizeText(
   value
 ) {
   return String(
-    value || ""
+    value ||
+      ""
   )
     .trim()
     .toLowerCase()
-    .normalize("NFD")
+    .normalize(
+      "NFD"
+    )
     .replace(
       /[\u0300-\u036f]/g,
       ""
