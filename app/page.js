@@ -1,84 +1,149 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import { getSupabase } from "../lib/supabase";
 
-const sections = [
+const MENU = [
   "Inicio",
-  "Audios",
-  "Historia",
-  "Personajes",
+  "Mi Historia",
   "El Libro",
-  "La Serie",
+  "Personas",
   "Archivo",
-  "Fotos y Videos",
+  "Podcast",
   "Diseño",
 ];
 
-const defaultDesign = {
+const DEFAULT_DESIGN = {
   background: "#0b0b0b",
   sidebar: "#0d0d0d",
   card: "#171717",
-  cardOpacity: 100,
   accent: "#ddc99e",
   text: "#f1eee7",
-  secondaryText: "#aaa59c",
+  secondary: "#aaa59c",
   border: "#303030",
+
   backgroundImage: "",
-  backgroundOpacity: 22,
+  backgroundOpacity: 20,
   backgroundBlur: 0,
-  backgroundPosition: "center",
-  backgroundSize: "cover",
-  titleFont: "Georgia",
-  bodyFont: "Arial",
-  titleSize: 48,
-  bodySize: 16,
+
+  cardOpacity: 100,
   radius: 18,
   buttonRadius: 11,
-  sidebarWidth: 270,
-  sidebarOpacity: 100,
-  sidebarBlur: 0,
-  cardBlur: 0,
-  contentWidth: 1140,
+
+  titleFont: "Georgia",
+  bodyFont: "Arial",
+
+  sidebarWidth: 260,
+  contentWidth: 1150,
+};
+
+const DEFAULT_TEXTS = {
+  projectName: "NO SE QUIEN SOY",
+
+  homeTitle:
+    "Una vida. Muchos recuerdos. Un libro.",
+
+  homeSubtitle:
+    "Contá la historia como la recordás. La aplicación conserva cada recuerdo original y te ayuda a transformarlo en un libro.",
+
+  historyTitle:
+    "Contá la historia",
+
+  historySubtitle:
+    "Podés escribir un recuerdo o contarlo con tu propia voz.",
+
+  bookTitle:
+    "El Libro",
+
+  bookSubtitle:
+    "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
+
+  podcastTitle:
+    "Podcast",
+
+  podcastSubtitle:
+    "Convertí historias, capítulos y recuerdos en episodios de audio.",
 };
 
 export default function Home() {
-  const supabase = useMemo(() => getSupabase(), []);
-
-  const [active, setActive] = useState("Inicio");
-  const [question, setQuestion] = useState("");
-
-  const [stories, setStories] = useState([]);
-  const [project, setProject] = useState(null);
-
-  const [notice, setNotice] = useState("");
-  const [loading, setLoading] = useState(false);
+  const supabase = useMemo(
+    () => getSupabase(),
+    []
+  );
 
   const audioInput = useRef(null);
   const mediaInput = useRef(null);
   const backgroundInput = useRef(null);
+  const podcastInput = useRef(null);
 
-  const [design, setDesign] = useState(defaultDesign);
+  const [active, setActive] =
+    useState("Inicio");
 
-  const [stats, setStats] = useState({
-    audios: 0,
-    historias: 0,
-    personajes: 0,
-    capitulos: 0,
-  });
+  const [project, setProject] =
+    useState(null);
+
+  const [stories, setStories] =
+    useState([]);
+
+  const [chapters, setChapters] =
+    useState([]);
+
+  const [design, setDesign] =
+    useState(DEFAULT_DESIGN);
+
+  const [texts, setTexts] =
+    useState(DEFAULT_TEXTS);
+
+  const [notice, setNotice] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  /*
+  ===========================
+  CARGA INICIAL
+  ===========================
+  */
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("nqs_design");
+    loadLocalPreferences();
+    boot();
+  }, []);
 
-      if (saved) {
+  function loadLocalPreferences() {
+    try {
+      const savedDesign =
+        localStorage.getItem(
+          "nqs_design"
+        );
+
+      const savedTexts =
+        localStorage.getItem(
+          "nqs_texts"
+        );
+
+      if (savedDesign) {
         setDesign({
-          ...defaultDesign,
-          ...JSON.parse(saved),
+          ...DEFAULT_DESIGN,
+          ...JSON.parse(savedDesign),
+        });
+      }
+
+      if (savedTexts) {
+        setTexts({
+          ...DEFAULT_TEXTS,
+          ...JSON.parse(savedTexts),
         });
       }
     } catch {}
-  }, []);
+  }
 
   useEffect(() => {
     try {
@@ -90,45 +155,71 @@ export default function Home() {
   }, [design]);
 
   useEffect(() => {
-    boot();
-  }, []);
+    try {
+      localStorage.setItem(
+        "nqs_texts",
+        JSON.stringify(texts)
+      );
+    } catch {}
+  }, [texts]);
+
+  /*
+  ===========================
+  SUPABASE
+  ===========================
+  */
 
   async function boot() {
     setLoading(true);
 
     try {
-      let { data: existingProject, error: projectError } =
-        await supabase
-          .from("projects")
-          .select("*")
-          .eq("title", "NO SE QUIEN SOY")
-          .limit(1)
-          .maybeSingle();
+      let {
+        data: foundProject,
+        error,
+      } = await supabase
+        .from("projects")
+        .select("*")
+        .eq(
+          "title",
+          "NO SE QUIEN SOY"
+        )
+        .limit(1)
+        .maybeSingle();
 
-      if (projectError) {
-        console.error(projectError);
+      if (error) {
+        console.error(error);
       }
 
-      if (!existingProject) {
-        const created = await supabase
-          .from("projects")
-          .insert({
-            title: "NO SE QUIEN SOY",
-          })
-          .select()
-          .single();
+      if (!foundProject) {
+        const created =
+          await supabase
+            .from("projects")
+            .insert({
+              title:
+                "NO SE QUIEN SOY",
+            })
+            .select()
+            .single();
 
         if (created.error) {
           throw created.error;
         }
 
-        existingProject = created.data;
+        foundProject =
+          created.data;
       }
 
-      setProject(existingProject);
+      setProject(foundProject);
 
-      if (existingProject?.id) {
-        await loadStories(existingProject.id);
+      if (foundProject?.id) {
+        await Promise.all([
+          loadStories(
+            foundProject.id
+          ),
+          loadChapters(
+            foundProject.id
+          ),
+        ]);
       }
     } catch (error) {
       flash(
@@ -140,51 +231,95 @@ export default function Home() {
     setLoading(false);
   }
 
-  async function loadStories(projectId) {
-    const { data, error } = await supabase
-      .from("stories")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("created_at", {
-        ascending: false,
-      });
+  async function loadStories(
+    projectId
+  ) {
+    const { data, error } =
+      await supabase
+        .from("stories")
+        .select("*")
+        .eq(
+          "project_id",
+          projectId
+        )
+        .order("created_at", {
+          ascending: false,
+        });
 
     if (error) {
-      flash(error.message);
+      console.error(error);
       return;
     }
 
     setStories(data || []);
-
-    setStats((prev) => ({
-      ...prev,
-      historias: data?.length || 0,
-    }));
   }
 
-  async function saveStory(title, story) {
-    if (!story.trim()) {
-      flash("Escribí el recuerdo antes de guardarlo.");
+  async function loadChapters(
+    projectId
+  ) {
+    const { data, error } =
+      await supabase
+        .from("chapters")
+        .select("*")
+        .eq(
+          "project_id",
+          projectId
+        )
+        .order("created_at", {
+          ascending: true,
+        });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setChapters(data || []);
+  }
+
+  /*
+  ===========================
+  HISTORIAS
+  ===========================
+  */
+
+  async function saveStory({
+    title,
+    text,
+  }) {
+    if (!text.trim()) {
+      flash(
+        "Escribí el recuerdo antes de guardarlo."
+      );
       return false;
     }
 
     if (!project?.id) {
-      flash("El proyecto todavía no está cargado.");
+      flash(
+        "El proyecto todavía no está listo."
+      );
       return false;
     }
 
     setLoading(true);
 
-    const { error } = await supabase
-      .from("stories")
-      .insert({
-        project_id: project.id,
-        title:
-          title.trim() ||
-          "Recuerdo sin título",
-        original_text: story.trim(),
-        source_type: "written",
-      });
+    const { error } =
+      await supabase
+        .from("stories")
+        .insert({
+          project_id:
+            project.id,
+
+          title:
+            title.trim() ||
+            "Recuerdo sin título",
+
+          original_text:
+            text.trim(),
+
+          source_type:
+            "written",
+        });
 
     setLoading(false);
 
@@ -196,60 +331,243 @@ export default function Home() {
       return false;
     }
 
-    await loadStories(project.id);
+    await loadStories(
+      project.id
+    );
 
-    flash("Recuerdo guardado en Supabase.");
+    flash(
+      "Recuerdo guardado."
+    );
 
     return true;
   }
 
-  async function deleteStory(id) {
-    const ok = window.confirm(
-      "¿Querés eliminar este recuerdo?"
-    );
+  async function deleteStory(
+    id
+  ) {
+    const ok =
+      window.confirm(
+        "¿Eliminar este recuerdo?"
+      );
 
     if (!ok) return;
 
-    const { error } = await supabase
-      .from("stories")
-      .delete()
-      .eq("id", id);
+    const { error } =
+      await supabase
+        .from("stories")
+        .delete()
+        .eq("id", id);
 
     if (error) {
       flash(error.message);
       return;
     }
 
-    await loadStories(project.id);
-
-    flash("Recuerdo eliminado.");
+    await loadStories(
+      project.id
+    );
   }
 
-  function flash(text) {
-    setNotice(text);
+  /*
+  ===========================
+  LIBRO
+  ===========================
+  */
 
-    setTimeout(() => {
-      setNotice("");
-    }, 3500);
+  async function createChapter() {
+    if (!project?.id) return;
+
+    const number =
+      chapters.length + 1;
+
+    const { error } =
+      await supabase
+        .from("chapters")
+        .insert({
+          project_id:
+            project.id,
+
+          title:
+            `Capítulo ${number}`,
+
+          content: "",
+        });
+
+    if (error) {
+      flash(
+        "No se pudo crear el capítulo: " +
+          error.message
+      );
+      return;
+    }
+
+    await loadChapters(
+      project.id
+    );
+
+    flash(
+      "Capítulo creado."
+    );
   }
 
-  function updateDesign(key, value) {
+  async function updateChapter(
+    id,
+    field,
+    value
+  ) {
+    setChapters((prev) =>
+      prev.map((chapter) =>
+        chapter.id === id
+          ? {
+              ...chapter,
+              [field]: value,
+            }
+          : chapter
+      )
+    );
+
+    const { error } =
+      await supabase
+        .from("chapters")
+        .update({
+          [field]: value,
+        })
+        .eq("id", id);
+
+    if (error) {
+      console.error(error);
+      flash(
+        "No se pudo actualizar el capítulo."
+      );
+    }
+  }
+
+  async function deleteChapter(
+    id
+  ) {
+    const ok =
+      window.confirm(
+        "¿Eliminar este capítulo?"
+      );
+
+    if (!ok) return;
+
+    const { error } =
+      await supabase
+        .from("chapters")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+      flash(error.message);
+      return;
+    }
+
+    await loadChapters(
+      project.id
+    );
+  }
+
+  /*
+  ===========================
+  ARCHIVOS
+  ===========================
+  */
+
+  async function uploadFiles(
+    files,
+    type = "archivo"
+  ) {
+    if (!files?.length) return;
+
+    let uploaded = 0;
+
+    for (const file of files) {
+      try {
+        const cleanName =
+          file.name
+            .replace(
+              /[^a-zA-Z0-9._-]/g,
+              "_"
+            );
+
+        const path =
+          `${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}-${cleanName}`;
+
+        const { error } =
+          await supabase.storage
+            .from("memorias")
+            .upload(
+              path,
+              file,
+              {
+                upsert: false,
+              }
+            );
+
+        if (!error) {
+          uploaded++;
+        }
+      } catch {}
+    }
+
+    flash(
+      `${uploaded} ${type}(s) subido(s).`
+    );
+  }
+
+  /*
+  ===========================
+  DISEÑO
+  ===========================
+  */
+
+  function updateDesign(
+    key,
+    value
+  ) {
     setDesign((prev) => ({
       ...prev,
       [key]: value,
     }));
   }
 
-  function restorePremium() {
-    setDesign(defaultDesign);
+  function updateText(
+    key,
+    value
+  ) {
+    setTexts((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   }
 
-  function uploadBackground(event) {
-    const file = event.target.files?.[0];
+  function restorePremium() {
+    setDesign(
+      DEFAULT_DESIGN
+    );
+
+    setTexts(
+      DEFAULT_TEXTS
+    );
+
+    flash(
+      "Diseño PREMIUM restaurado."
+    );
+  }
+
+  function uploadBackground(
+    event
+  ) {
+    const file =
+      event.target.files?.[0];
 
     if (!file) return;
 
-    const reader = new FileReader();
+    const reader =
+      new FileReader();
 
     reader.onload = () => {
       updateDesign(
@@ -258,74 +576,53 @@ export default function Home() {
       );
     };
 
-    reader.readAsDataURL(file);
-  }
-
-  function removeBackground() {
-    updateDesign("backgroundImage", "");
-
-    if (backgroundInput.current) {
-      backgroundInput.current.value = "";
-    }
-  }
-
-  function subirAudios(event) {
-    const files = Array.from(
-      event.target.files || []
-    );
-
-    if (!files.length) return;
-
-    setStats((prev) => ({
-      ...prev,
-      audios:
-        prev.audios + files.length,
-    }));
-
-    flash(
-      `${files.length} audio(s) seleccionado(s).`
+    reader.readAsDataURL(
+      file
     );
   }
 
-  function subirArchivos(event) {
-    const files = Array.from(
-      event.target.files || []
-    );
+  function flash(message) {
+    setNotice(message);
 
-    if (!files.length) return;
-
-    flash(
-      `${files.length} archivo(s) seleccionado(s).`
-    );
+    setTimeout(() => {
+      setNotice("");
+    }, 2800);
   }
 
-  function preguntar() {
-    if (!question.trim()) return;
+  /*
+  ===========================
+  VARIABLES VISUALES
+  ===========================
+  */
 
-    flash(
-      "La búsqueda inteligente se conectará después con todo el archivo biográfico."
-    );
-  }
+  const variables = {
+    "--bg":
+      design.background,
 
-  const styleVariables = {
-    "--bg": design.background,
-
-    "--sidebar": hexToRgba(
+    "--sidebar":
       design.sidebar,
-      design.sidebarOpacity / 100
-    ),
 
-    "--card": hexToRgba(
-      design.card,
-      design.cardOpacity / 100
-    ),
+    "--card":
+      hexToRgba(
+        design.card,
+        design.cardOpacity /
+          100
+      ),
 
-    "--accent": design.accent,
-    "--text": design.text,
-    "--secondary": design.secondaryText,
-    "--border": design.border,
+    "--accent":
+      design.accent,
 
-    "--radius": `${design.radius}px`,
+    "--text":
+      design.text,
+
+    "--secondary":
+      design.secondary,
+
+    "--border":
+      design.border,
+
+    "--radius":
+      `${design.radius}px`,
 
     "--button-radius":
       `${design.buttonRadius}px`,
@@ -336,85 +633,75 @@ export default function Home() {
     "--content-width":
       `${design.contentWidth}px`,
 
-    "--title-size":
-      `${design.titleSize}px`,
-
-    "--body-size":
-      `${design.bodySize}px`,
-
-    "--title-font":
-      design.titleFont === "Georgia"
-        ? 'Georgia, "Times New Roman", serif'
-        : design.titleFont === "Arial"
-        ? "Arial, Helvetica, sans-serif"
-        : design.titleFont === "Helvetica"
-        ? "Helvetica, Arial, sans-serif"
-        : '"Times New Roman", Times, serif',
-
-    "--body-font":
-      design.bodyFont === "Georgia"
-        ? 'Georgia, "Times New Roman", serif'
-        : design.bodyFont === "Helvetica"
-        ? "Helvetica, Arial, sans-serif"
-        : "Arial, Helvetica, sans-serif",
-
-    "--card-blur":
-      `blur(${design.cardBlur}px)`,
-
-    "--sidebar-blur":
-      `blur(${design.sidebarBlur}px)`,
-
     "--background-image":
       design.backgroundImage
         ? `url("${design.backgroundImage}")`
         : "none",
 
     "--background-opacity":
-      design.backgroundOpacity / 100,
+      design.backgroundOpacity /
+      100,
 
     "--background-blur":
       `blur(${design.backgroundBlur}px)`,
 
-    "--background-position":
-      design.backgroundPosition,
+    "--title-font":
+      design.titleFont ===
+      "Arial"
+        ? "Arial, Helvetica, sans-serif"
+        : design.titleFont ===
+          "Helvetica"
+        ? "Helvetica, Arial, sans-serif"
+        : 'Georgia, "Times New Roman", serif',
 
-    "--background-size":
-      design.backgroundSize,
+    "--body-font":
+      design.bodyFont ===
+      "Georgia"
+        ? 'Georgia, "Times New Roman", serif'
+        : "Arial, Helvetica, sans-serif",
   };
 
   return (
     <div
       className="appShell"
-      style={styleVariables}
+      style={variables}
     >
       <div className="wallpaper" />
 
       {notice && (
-        <div className="appNotice">
+        <div className="notice">
           {notice}
         </div>
       )}
 
       <aside className="sidebar">
-        <div className="brand">
-          <span>NO SE</span>
-          <span>QUIEN SOY</span>
-        </div>
+        <EditableText
+          className="brand"
+          value={
+            texts.projectName
+          }
+          onChange={(value) =>
+            updateText(
+              "projectName",
+              value
+            )
+          }
+        />
 
         <nav className="navigation">
-          {sections.map((section) => (
+          {MENU.map((item) => (
             <button
-              key={section}
+              key={item}
               className={
-                active === section
+                active === item
                   ? "navItem active"
                   : "navItem"
               }
               onClick={() =>
-                setActive(section)
+                setActive(item)
               }
             >
-              {section}
+              {item}
             </button>
           ))}
         </nav>
@@ -426,304 +713,157 @@ export default function Home() {
 
       <main className="mainContent">
         {active === "Inicio" && (
-          <>
-            <section className="hero">
-              <div className="heroTop">
-                <div>
-                  <div className="eyebrow">
-                    PROYECTO BIOGRÁFICO PRIVADO
-                  </div>
-
-                  <h1>
-                    La historia de una vida
-                    extraordinaria
-                  </h1>
-                </div>
-
-                <div className="status">
-                  NO INVENTAR · ACTIVO
-                </div>
-              </div>
-
-              <div className="actions">
-                <button
-                  className="primaryButton"
-                  onClick={() =>
-                    audioInput.current?.click()
-                  }
-                >
-                  ● Grabar historia
-                </button>
-
-                <button
-                  className="secondaryButton"
-                  onClick={() =>
-                    setActive("Historia")
-                  }
-                >
-                  ✎ Escribir recuerdo
-                </button>
-
-                <button
-                  className="primaryButton"
-                  onClick={() =>
-                    audioInput.current?.click()
-                  }
-                >
-                  Subir varios audios
-                </button>
-
-                <button
-                  className="primaryButton"
-                  onClick={() =>
-                    mediaInput.current?.click()
-                  }
-                >
-                  Subir varias fotos/documentos
-                </button>
-              </div>
-
-              <input
-                ref={audioInput}
-                type="file"
-                accept="audio/*"
-                multiple
-                hidden
-                onChange={subirAudios}
-              />
-
-              <input
-                ref={mediaInput}
-                type="file"
-                accept="image/*,video/*,.pdf,.doc,.docx"
-                multiple
-                hidden
-                onChange={subirArchivos}
-              />
-            </section>
-
-            <section className="statsGrid">
-              <StatCard
-                label="Audios"
-                number={stats.audios}
-              />
-
-              <StatCard
-                label="Historias"
-                number={stories.length}
-              />
-
-              <StatCard
-                label="Personajes"
-                number={stats.personajes}
-              />
-
-              <StatCard
-                label="Capítulos"
-                number={stats.capitulos}
-              />
-            </section>
-
-            <section className="dashboardGrid">
-              <div className="panel memorySearch">
-                <div className="panelEyebrow">
-                  PREGUNTALE A LA HISTORIA
-                </div>
-
-                <h2>
-                  Buscá recuerdos, personas,
-                  años o escenas
-                </h2>
-
-                <p>
-                  La inteligencia del proyecto
-                  podrá responder usando
-                  audios, textos, fotografías,
-                  videos y documentos.
-                </p>
-
-                <div className="searchBar">
-                  <input
-                    value={question}
-                    onChange={(e) =>
-                      setQuestion(
-                        e.target.value
-                      )
-                    }
-                    placeholder="Ej.: ¿Qué pasó en 1985?"
-                  />
-
-                  <button
-                    onClick={preguntar}
-                  >
-                    Preguntar
-                  </button>
-                </div>
-              </div>
-
-              <div className="panel interview">
-                <div className="panelEyebrow">
-                  PRÓXIMA ENTREVISTA
-                </div>
-
-                <InterviewQuestion
-                  title="Infancia"
-                  text="¿Cuál es el primer recuerdo que conservás?"
-                />
-
-                <InterviewQuestion
-                  title="Familia"
-                  text="¿Quién fue la persona que más influyó en vos?"
-                />
-
-                <InterviewQuestion
-                  title="Giro de vida"
-                  text="¿Qué decisión cambió todo?"
-                />
-              </div>
-            </section>
-          </>
-        )}
-
-        {active === "Historia" && (
-          <StoryEditor
-            stories={stories}
-            loading={loading}
-            onSave={saveStory}
-            onDelete={deleteStory}
+          <HomePage
+            texts={texts}
+            updateText={
+              updateText
+            }
+            storyCount={
+              stories.length
+            }
+            chapterCount={
+              chapters.length
+            }
+            goHistory={() =>
+              setActive(
+                "Mi Historia"
+              )
+            }
+            goBook={() =>
+              setActive(
+                "El Libro"
+              )
+            }
+            audioInput={
+              audioInput
+            }
+            mediaInput={
+              mediaInput
+            }
+            uploadFiles={
+              uploadFiles
+            }
           />
         )}
 
-        {active === "Audios" && (
-          <SectionPage
-            kicker="ARCHIVO SONORO"
-            title="Audios"
-            description="Grabaciones, entrevistas, conversaciones y recuerdos contados con la propia voz."
-          >
-            <button
-              className="primaryButton"
-              onClick={() =>
-                audioInput.current?.click()
-              }
-            >
-              + Subir varios audios
-            </button>
-          </SectionPage>
+        {active ===
+          "Mi Historia" && (
+          <HistoryPage
+            texts={texts}
+            updateText={
+              updateText
+            }
+            stories={stories}
+            saveStory={
+              saveStory
+            }
+            deleteStory={
+              deleteStory
+            }
+            loading={
+              loading
+            }
+            audioInput={
+              audioInput
+            }
+            uploadFiles={
+              uploadFiles
+            }
+          />
         )}
 
-        {active === "Personajes" && (
-          <SectionPage
-            kicker="LAS PERSONAS DE LA HISTORIA"
-            title="Personajes"
-            description="Familia, amigos, socios, amores, adversarios y todas las personas que formaron parte de la vida."
-          >
-            <button className="primaryButton">
-              + Nuevo personaje
-            </button>
-          </SectionPage>
+        {active ===
+          "El Libro" && (
+          <BookPage
+            texts={texts}
+            updateText={
+              updateText
+            }
+            chapters={
+              chapters
+            }
+            createChapter={
+              createChapter
+            }
+            updateChapter={
+              updateChapter
+            }
+            deleteChapter={
+              deleteChapter
+            }
+            stories={
+              stories
+            }
+          />
         )}
 
-        {active === "El Libro" && (
-          <SectionPage
-            kicker="MANUSCRITO"
-            title="El Libro"
-            description="Los recuerdos se transformarán en capítulos, escenas y una narración completa."
+        {active ===
+          "Personas" && (
+          <SimplePage
+            eyebrow="PERSONAJES"
+            title="Personas"
+            description="Familia, amigos, socios, amores y todas las personas importantes de la historia."
           >
-            <div className="emptyBook">
-              <span>
-                NO SE QUIEN SOY
-              </span>
-
-              <h3>
-                El libro empieza con el
-                primer recuerdo.
-              </h3>
-
-              <p>
-                Ya tenés {stories.length} recuerdo(s)
-                guardado(s).
-              </p>
+            <div className="emptyPanel">
+              Próximamente vas a
+              poder relacionar cada
+              persona con recuerdos,
+              capítulos, fotos y
+              audios.
             </div>
-          </SectionPage>
+          </SimplePage>
         )}
 
-        {active === "La Serie" && (
-          <SectionPage
-            kicker="ADAPTACIÓN AUDIOVISUAL"
-            title="La Serie"
-            description="Personajes, temporadas, episodios y escenas para desarrollar la adaptación audiovisual."
-          >
-            <div className="seriesCard">
-              <div>
-                EPISODIO 01
-              </div>
-
-              <h3>El origen</h3>
-
-              <p>
-                El comienzo de una historia
-                que todavía está por
-                reconstruirse.
-              </p>
-            </div>
-          </SectionPage>
+        {active ===
+          "Archivo" && (
+          <ArchivePage
+            stories={
+              stories
+            }
+            chapters={
+              chapters
+            }
+            mediaInput={
+              mediaInput
+            }
+            uploadFiles={
+              uploadFiles
+            }
+          />
         )}
 
-        {active === "Archivo" && (
-          <SectionPage
-            kicker="ARCHIVO GENERAL"
-            title="Todo queda guardado"
-            description="Audios, textos, fotografías, documentos y videos organizados en un único archivo biográfico."
-          >
-            <div className="archiveGrid">
-              <ArchiveBox
-                title="Audios"
-                value={stats.audios}
-              />
-
-              <ArchiveBox
-                title="Historias"
-                value={stories.length}
-              />
-
-              <ArchiveBox
-                title="Fotografías"
-                value={0}
-              />
-
-              <ArchiveBox
-                title="Videos"
-                value={0}
-              />
-            </div>
-          </SectionPage>
+        {active ===
+          "Podcast" && (
+          <PodcastPage
+            texts={texts}
+            updateText={
+              updateText
+            }
+            podcastInput={
+              podcastInput
+            }
+            uploadFiles={
+              uploadFiles
+            }
+          />
         )}
 
-        {active === "Fotos y Videos" && (
-          <SectionPage
-            kicker="ARCHIVO VISUAL"
-            title="Fotos y Videos"
-            description="El archivo visual de toda una vida. Podés seleccionar varios archivos al mismo tiempo."
-          >
-            <button
-              className="primaryButton"
-              onClick={() =>
-                mediaInput.current?.click()
-              }
-            >
-              + Subir fotos y videos
-            </button>
-          </SectionPage>
-        )}
-
-        {active === "Diseño" && (
-          <DesignStudio
+        {active ===
+          "Diseño" && (
+          <DesignPage
             design={design}
-            updateDesign={updateDesign}
-            restorePremium={restorePremium}
-            backgroundInput={backgroundInput}
-            uploadBackground={uploadBackground}
-            removeBackground={removeBackground}
+            updateDesign={
+              updateDesign
+            }
+            restorePremium={
+              restorePremium
+            }
+            backgroundInput={
+              backgroundInput
+            }
+            uploadBackground={
+              uploadBackground
+            }
           />
         )}
       </main>
@@ -731,176 +871,935 @@ export default function Home() {
   );
 }
 
-function StoryEditor({
+/*
+================================
+INICIO
+================================
+*/
+
+function HomePage({
+  texts,
+  updateText,
+  storyCount,
+  chapterCount,
+  goHistory,
+  goBook,
+  audioInput,
+  mediaInput,
+  uploadFiles,
+}) {
+  return (
+    <>
+      <section className="hero">
+        <div className="eyebrow">
+          PROYECTO BIOGRÁFICO
+        </div>
+
+        <EditableText
+          tag="h1"
+          className="mainTitle"
+          value={
+            texts.homeTitle
+          }
+          onChange={(value) =>
+            updateText(
+              "homeTitle",
+              value
+            )
+          }
+        />
+
+        <EditableText
+          tag="p"
+          className="mainSubtitle"
+          value={
+            texts.homeSubtitle
+          }
+          onChange={(value) =>
+            updateText(
+              "homeSubtitle",
+              value
+            )
+          }
+        />
+
+        <div className="mainActions">
+          <button
+            className="primaryButton hugeButton"
+            onClick={
+              goHistory
+            }
+          >
+            ✎ Escribir un recuerdo
+          </button>
+
+          <button
+            className="secondaryButton hugeButton"
+            onClick={() =>
+              audioInput.current?.click()
+            }
+          >
+            ● Contarlo por audio
+          </button>
+
+          <input
+            ref={audioInput}
+            hidden
+            multiple
+            type="file"
+            accept="audio/*"
+            onChange={(e) =>
+              uploadFiles(
+                Array.from(
+                  e.target.files ||
+                    []
+                ),
+                "audio"
+              )
+            }
+          />
+        </div>
+      </section>
+
+      <section className="workflow">
+        <div className="workflowCard important">
+          <span>01</span>
+          <h3>
+            Contás un recuerdo
+          </h3>
+          <p>
+            Escribís o hablás
+            libremente. No hace
+            falta ordenar nada.
+          </p>
+        </div>
+
+        <div className="workflowArrow">
+          →
+        </div>
+
+        <div className="workflowCard">
+          <span>02</span>
+          <h3>
+            Queda documentado
+          </h3>
+          <p>
+            El recuerdo original se
+            conserva dentro de Mi
+            Historia.
+          </p>
+        </div>
+
+        <div className="workflowArrow">
+          →
+        </div>
+
+        <div className="workflowCard">
+          <span>03</span>
+          <h3>
+            Va formando el libro
+          </h3>
+          <p>
+            La historia narrativa se
+            organiza en capítulos.
+          </p>
+        </div>
+      </section>
+
+      <section className="homeStats">
+        <div className="stat">
+          <small>
+            RECUERDOS
+          </small>
+          <strong>
+            {storyCount}
+          </strong>
+        </div>
+
+        <div className="stat">
+          <small>
+            CAPÍTULOS
+          </small>
+          <strong>
+            {chapterCount}
+          </strong>
+        </div>
+
+        <button
+          className="openBook"
+          onClick={goBook}
+        >
+          <span>
+            EL LIBRO
+          </span>
+
+          <strong>
+            Ver cómo va quedando
+            →
+          </strong>
+        </button>
+      </section>
+
+      <section className="quickArchive">
+        <button
+          className="uploadQuick"
+          onClick={() =>
+            mediaInput.current?.click()
+          }
+        >
+          + Agregar fotos,
+          documentos o videos
+        </button>
+
+        <input
+          ref={mediaInput}
+          hidden
+          multiple
+          type="file"
+          accept="image/*,video/*,.pdf,.doc,.docx"
+          onChange={(e) =>
+            uploadFiles(
+              Array.from(
+                e.target.files ||
+                  []
+              )
+            )
+          }
+        />
+      </section>
+    </>
+  );
+}
+
+/*
+================================
+MI HISTORIA
+================================
+*/
+
+function HistoryPage({
+  texts,
+  updateText,
   stories,
+  saveStory,
+  deleteStory,
   loading,
-  onSave,
-  onDelete,
+  audioInput,
+  uploadFiles,
 }) {
   const [title, setTitle] =
     useState("");
 
-  const [story, setStory] =
+  const [text, setText] =
     useState("");
 
   async function save() {
-    const ok = await onSave(
-      title,
-      story
-    );
+    const ok =
+      await saveStory({
+        title,
+        text,
+      });
 
     if (ok) {
       setTitle("");
-      setStory("");
+      setText("");
     }
   }
 
   return (
-    <section className="sectionPage">
+    <section className="page">
       <div className="eyebrow">
-        ESCRIBIR LA HISTORIA
+        MATERIAL ORIGINAL
       </div>
 
-      <h1>Historia</h1>
+      <EditableText
+        tag="h1"
+        className="pageTitle"
+        value={
+          texts.historyTitle
+        }
+        onChange={(value) =>
+          updateText(
+            "historyTitle",
+            value
+          )
+        }
+      />
 
-      <p className="sectionDescription">
-        Escribí los recuerdos y dejalos
-        guardados dentro del archivo
-        biográfico.
-      </p>
+      <EditableText
+        tag="p"
+        className="pageSubtitle"
+        value={
+          texts.historySubtitle
+        }
+        onChange={(value) =>
+          updateText(
+            "historySubtitle",
+            value
+          )
+        }
+      />
 
-      <div className="editor">
-        <input
-          value={title}
-          onChange={(e) =>
-            setTitle(e.target.value)
-          }
-          placeholder="Título del recuerdo"
-        />
+      <div className="historyLayout">
+        <div className="storyWriter">
+          <div className="writerHeader">
+            <span>
+              NUEVO RECUERDO
+            </span>
 
-        <textarea
-          value={story}
-          onChange={(e) =>
-            setStory(e.target.value)
-          }
-          placeholder="Empezá a escribir..."
-        />
+            <button
+              className="audioMini"
+              onClick={() =>
+                audioInput.current?.click()
+              }
+            >
+              ● Grabar / subir audio
+            </button>
+          </div>
 
-        <button
-          className="primaryButton"
-          disabled={loading}
-          onClick={save}
-        >
-          {loading
-            ? "Guardando..."
-            : "Guardar recuerdo"}
-        </button>
+          <input
+            className="storyTitleInput"
+            value={title}
+            onChange={(e) =>
+              setTitle(
+                e.target.value
+              )
+            }
+            placeholder="Título opcional"
+          />
+
+          <textarea
+            className="storyTextarea"
+            value={text}
+            onChange={(e) =>
+              setText(
+                e.target.value
+              )
+            }
+            placeholder="Escribí el recuerdo como te venga a la memoria..."
+          />
+
+          <div className="writerBottom">
+            <span>
+              No hace falta escribir
+              como un libro. Contalo
+              como ocurrió.
+            </span>
+
+            <button
+              className="primaryButton"
+              disabled={
+                loading
+              }
+              onClick={save}
+            >
+              {loading
+                ? "Guardando..."
+                : "Guardar recuerdo"}
+            </button>
+          </div>
+
+          <input
+            ref={audioInput}
+            hidden
+            multiple
+            type="file"
+            accept="audio/*"
+            onChange={(e) =>
+              uploadFiles(
+                Array.from(
+                  e.target.files ||
+                    []
+                ),
+                "audio"
+              )
+            }
+          />
+        </div>
+
+        <aside className="historyHelp">
+          <span>
+            PODRÍAS CONTAR
+          </span>
+
+          <button>
+            ¿Cuál es tu primer
+            recuerdo?
+          </button>
+
+          <button>
+            ¿Cómo era la casa donde
+            creciste?
+          </button>
+
+          <button>
+            ¿Quién marcó tu
+            infancia?
+          </button>
+
+          <button>
+            ¿Cuál fue una decisión
+            que cambió tu vida?
+          </button>
+        </aside>
       </div>
 
-      <div className="savedStories">
-        <div className="savedStoriesHeader">
+      <div className="savedSection">
+        <div className="sectionHeader">
           <div>
-            <div className="eyebrow">
-              ARCHIVO DE RECUERDOS
-            </div>
+            <span className="eyebrow">
+              ARCHIVO REAL
+            </span>
 
             <h2>
               Recuerdos guardados
             </h2>
           </div>
 
-          <span>
+          <strong>
             {stories.length}
-          </span>
+          </strong>
         </div>
 
-        {stories.length === 0 ? (
-          <div className="emptyState">
-            Todavía no hay recuerdos
-            guardados.
+        {stories.length ===
+        0 ? (
+          <div className="emptyPanel">
+            Todavía no hay
+            recuerdos. El primero
+            puede empezar con una
+            frase.
           </div>
         ) : (
-          stories.map((item) => (
-            <div
-              className="storyCard"
-              key={item.id}
-            >
-              <div className="storyCardTop">
-                <div>
-                  <h3>
-                    {item.title ||
-                      "Recuerdo"}
-                  </h3>
-
-                  <small>
-                    {item.created_at
-                      ? new Date(
-                          item.created_at
-                        ).toLocaleString(
-                          "es-AR"
-                        )
-                      : ""}
-                  </small>
-                </div>
-
-                <button
-                  className="deleteStoryButton"
-                  onClick={() =>
-                    onDelete(item.id)
+          <div className="storiesList">
+            {stories.map(
+              (story) => (
+                <article
+                  className="storyCard"
+                  key={
+                    story.id
                   }
                 >
-                  Eliminar
-                </button>
-              </div>
+                  <div className="storyTop">
+                    <div>
+                      <h3>
+                        {story.title ||
+                          "Recuerdo"}
+                      </h3>
 
-              <p>
-                {item.original_text}
-              </p>
-            </div>
-          ))
+                      <small>
+                        {formatDate(
+                          story.created_at
+                        )}
+                      </small>
+                    </div>
+
+                    <button
+                      className="deleteButton"
+                      onClick={() =>
+                        deleteStory(
+                          story.id
+                        )
+                      }
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+
+                  <p>
+                    {
+                      story.original_text
+                    }
+                  </p>
+                </article>
+              )
+            )}
+          </div>
         )}
       </div>
     </section>
   );
 }
 
-function DesignStudio({
+/*
+================================
+EL LIBRO
+================================
+*/
+
+function BookPage({
+  texts,
+  updateText,
+  chapters,
+  createChapter,
+  updateChapter,
+  deleteChapter,
+  stories,
+}) {
+  return (
+    <section className="page">
+      <div className="eyebrow">
+        MANUSCRITO
+      </div>
+
+      <EditableText
+        tag="h1"
+        className="pageTitle"
+        value={
+          texts.bookTitle
+        }
+        onChange={(value) =>
+          updateText(
+            "bookTitle",
+            value
+          )
+        }
+      />
+
+      <EditableText
+        tag="p"
+        className="pageSubtitle"
+        value={
+          texts.bookSubtitle
+        }
+        onChange={(value) =>
+          updateText(
+            "bookSubtitle",
+            value
+          )
+        }
+      />
+
+      <div className="bookStatus">
+        <div>
+          <small>
+            MATERIAL ORIGINAL
+          </small>
+
+          <strong>
+            {stories.length} recuerdos
+          </strong>
+        </div>
+
+        <div>
+          <small>
+            MANUSCRITO
+          </small>
+
+          <strong>
+            {chapters.length} capítulos
+          </strong>
+        </div>
+
+        <button
+          className="primaryButton"
+          onClick={
+            createChapter
+          }
+        >
+          + Nuevo capítulo
+        </button>
+      </div>
+
+      {chapters.length ===
+      0 ? (
+        <div className="bookEmpty">
+          <span>
+            NO SE QUIEN SOY
+          </span>
+
+          <h2>
+            El libro todavía está
+            esperando su primer
+            capítulo.
+          </h2>
+
+          <p>
+            Los recuerdos originales
+            están en “Mi Historia”.
+            Acá se va construyendo la
+            versión literaria.
+          </p>
+
+          <button
+            className="primaryButton"
+            onClick={
+              createChapter
+            }
+          >
+            Crear primer capítulo
+          </button>
+        </div>
+      ) : (
+        <div className="chapters">
+          {chapters.map(
+            (chapter, index) => (
+              <ChapterEditor
+                key={
+                  chapter.id
+                }
+                chapter={
+                  chapter
+                }
+                number={
+                  index + 1
+                }
+                updateChapter={
+                  updateChapter
+                }
+                deleteChapter={
+                  deleteChapter
+                }
+              />
+            )
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ChapterEditor({
+  chapter,
+  number,
+  updateChapter,
+  deleteChapter,
+}) {
+  const [title, setTitle] =
+    useState(
+      chapter.title || ""
+    );
+
+  const [content, setContent] =
+    useState(
+      chapter.content || ""
+    );
+
+  useEffect(() => {
+    setTitle(
+      chapter.title || ""
+    );
+
+    setContent(
+      chapter.content || ""
+    );
+  }, [chapter]);
+
+  return (
+    <article className="chapterEditor">
+      <div className="chapterNumber">
+        CAPÍTULO{" "}
+        {String(number).padStart(
+          2,
+          "0"
+        )}
+      </div>
+
+      <input
+        className="chapterTitleInput"
+        value={title}
+        onChange={(e) =>
+          setTitle(
+            e.target.value
+          )
+        }
+        onBlur={() =>
+          updateChapter(
+            chapter.id,
+            "title",
+            title
+          )
+        }
+      />
+
+      <textarea
+        className="chapterContent"
+        value={content}
+        onChange={(e) =>
+          setContent(
+            e.target.value
+          )
+        }
+        onBlur={() =>
+          updateChapter(
+            chapter.id,
+            "content",
+            content
+          )
+        }
+        placeholder="Acá empieza la narración del capítulo..."
+      />
+
+      <div className="chapterFooter">
+        <span>
+          Los cambios se guardan al
+          salir del texto.
+        </span>
+
+        <button
+          onClick={() =>
+            deleteChapter(
+              chapter.id
+            )
+          }
+        >
+          Eliminar capítulo
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/*
+================================
+ARCHIVO
+================================
+*/
+
+function ArchivePage({
+  stories,
+  chapters,
+  mediaInput,
+  uploadFiles,
+}) {
+  return (
+    <SimplePage
+      eyebrow="ARCHIVO GENERAL"
+      title="Archivo"
+      description="Todo el material original de la historia en un mismo lugar."
+    >
+      <div className="archiveGrid">
+        <ArchiveCard
+          title="Recuerdos"
+          number={
+            stories.length
+          }
+        />
+
+        <ArchiveCard
+          title="Capítulos"
+          number={
+            chapters.length
+          }
+        />
+
+        <ArchiveCard
+          title="Audios"
+          number="—"
+        />
+
+        <ArchiveCard
+          title="Fotos y videos"
+          number="—"
+        />
+      </div>
+
+      <button
+        className="primaryButton archiveUpload"
+        onClick={() =>
+          mediaInput.current?.click()
+        }
+      >
+        + Subir material
+      </button>
+
+      <input
+        ref={mediaInput}
+        type="file"
+        hidden
+        multiple
+        accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+        onChange={(e) =>
+          uploadFiles(
+            Array.from(
+              e.target.files ||
+                []
+            )
+          )
+        }
+      />
+    </SimplePage>
+  );
+}
+
+/*
+================================
+PODCAST
+================================
+*/
+
+function PodcastPage({
+  texts,
+  updateText,
+  podcastInput,
+  uploadFiles,
+}) {
+  return (
+    <section className="page">
+      <div className="eyebrow">
+        AUDIO · CONTENIDO
+      </div>
+
+      <EditableText
+        tag="h1"
+        className="pageTitle"
+        value={
+          texts.podcastTitle
+        }
+        onChange={(value) =>
+          updateText(
+            "podcastTitle",
+            value
+          )
+        }
+      />
+
+      <EditableText
+        tag="p"
+        className="pageSubtitle"
+        value={
+          texts.podcastSubtitle
+        }
+        onChange={(value) =>
+          updateText(
+            "podcastSubtitle",
+            value
+          )
+        }
+      />
+
+      <div className="podcastGrid">
+        <div className="podcastCard">
+          <span>
+            NUEVO EPISODIO
+          </span>
+
+          <h2>
+            Crear desde la historia
+          </h2>
+
+          <p>
+            Más adelante podrás
+            elegir un recuerdo o
+            capítulo y convertirlo
+            en un guion para
+            podcast.
+          </p>
+
+          <button className="primaryButton">
+            Crear episodio
+          </button>
+        </div>
+
+        <div className="podcastCard">
+          <span>
+            AUDIO EXISTENTE
+          </span>
+
+          <h2>
+            Subir un podcast
+          </h2>
+
+          <p>
+            Guardá un episodio que
+            ya tengas grabado.
+          </p>
+
+          <button
+            className="secondaryButton"
+            onClick={() =>
+              podcastInput.current?.click()
+            }
+          >
+            Subir audio
+          </button>
+
+          <input
+            ref={podcastInput}
+            hidden
+            type="file"
+            accept="audio/*"
+            onChange={(e) =>
+              uploadFiles(
+                Array.from(
+                  e.target.files ||
+                    []
+                ),
+                "podcast"
+              )
+            }
+          />
+        </div>
+      </div>
+
+      <div className="socialFuture">
+        <span>
+          DISTRIBUCIÓN
+        </span>
+
+        <h3>
+          Instagram · YouTube ·
+          TikTok · Spotify ·
+          Facebook
+        </h3>
+
+        <p>
+          Esta parte la conectamos
+          después de terminar bien
+          el flujo del libro.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/*
+================================
+DISEÑO
+================================
+*/
+
+function DesignPage({
   design,
   updateDesign,
   restorePremium,
   backgroundInput,
   uploadBackground,
-  removeBackground,
 }) {
   return (
-    <section className="designPage">
-      <div className="eyebrow">
-        ESTUDIO VISUAL
-      </div>
-
-      <div className="designHeader">
+    <section className="page">
+      <div className="designTop">
         <div>
-          <h1>Diseño</h1>
+          <div className="eyebrow">
+            PERSONALIZACIÓN
+          </div>
 
-          <p>
-            Personalizá completamente la
-            apariencia de NO SE QUIEN SOY.
+          <h1 className="pageTitle">
+            Diseño
+          </h1>
+
+          <p className="pageSubtitle">
+            Los cambios se ven y se
+            guardan automáticamente.
           </p>
         </div>
 
         <button
           className="secondaryButton"
-          onClick={restorePremium}
+          onClick={
+            restorePremium
+          }
         >
           Restaurar PREMIUM
         </button>
       </div>
 
       <div className="designGrid">
-        <DesignGroup title="Fondo de pantalla">
-          <ColorControl
-            label="Color de fondo"
-            value={design.background}
+        <DesignGroup title="Fondo">
+          <ColorField
+            label="Color"
+            value={
+              design.background
+            }
             onChange={(value) =>
               updateDesign(
                 "background",
@@ -909,42 +1808,29 @@ function DesignStudio({
             }
           />
 
-          <div className="designerField">
-            <label>
-              Imagen de fondo
-            </label>
+          <button
+            className="secondaryButton"
+            onClick={() =>
+              backgroundInput.current?.click()
+            }
+          >
+            Subir imagen de fondo
+          </button>
 
-            <div className="designerButtons">
-              <button
-                className="smallButton"
-                onClick={() =>
-                  backgroundInput.current?.click()
-                }
-              >
-                Subir imagen
-              </button>
+          <input
+            ref={
+              backgroundInput
+            }
+            hidden
+            type="file"
+            accept="image/*"
+            onChange={
+              uploadBackground
+            }
+          />
 
-              {design.backgroundImage && (
-                <button
-                  className="smallButton ghost"
-                  onClick={removeBackground}
-                >
-                  Quitar
-                </button>
-              )}
-            </div>
-
-            <input
-              ref={backgroundInput}
-              hidden
-              type="file"
-              accept="image/*"
-              onChange={uploadBackground}
-            />
-          </div>
-
-          <RangeControl
-            label="Visibilidad de imagen"
+          <RangeField
+            label="Visibilidad"
             value={
               design.backgroundOpacity
             }
@@ -959,8 +1845,8 @@ function DesignStudio({
             }
           />
 
-          <RangeControl
-            label="Desenfoque del fondo"
+          <RangeField
+            label="Desenfoque"
             value={
               design.backgroundBlur
             }
@@ -977,9 +1863,11 @@ function DesignStudio({
         </DesignGroup>
 
         <DesignGroup title="Colores">
-          <ColorControl
-            label="Color principal"
-            value={design.accent}
+          <ColorField
+            label="Principal"
+            value={
+              design.accent
+            }
             onChange={(value) =>
               updateDesign(
                 "accent",
@@ -988,9 +1876,11 @@ function DesignStudio({
             }
           />
 
-          <ColorControl
-            label="Texto principal"
-            value={design.text}
+          <ColorField
+            label="Texto"
+            value={
+              design.text
+            }
             onChange={(value) =>
               updateDesign(
                 "text",
@@ -999,22 +1889,11 @@ function DesignStudio({
             }
           />
 
-          <ColorControl
-            label="Texto secundario"
-            value={
-              design.secondaryText
-            }
-            onChange={(value) =>
-              updateDesign(
-                "secondaryText",
-                value
-              )
-            }
-          />
-
-          <ColorControl
+          <ColorField
             label="Tarjetas"
-            value={design.card}
+            value={
+              design.card
+            }
             onChange={(value) =>
               updateDesign(
                 "card",
@@ -1023,9 +1902,11 @@ function DesignStudio({
             }
           />
 
-          <ColorControl
-            label="Menú lateral"
-            value={design.sidebar}
+          <ColorField
+            label="Menú"
+            value={
+              design.sidebar
+            }
             onChange={(value) =>
               updateDesign(
                 "sidebar",
@@ -1035,26 +1916,12 @@ function DesignStudio({
           />
         </DesignGroup>
 
-        <DesignGroup title="Tarjetas">
-          <RangeControl
-            label="Transparencia"
+        <DesignGroup title="Forma">
+          <RangeField
+            label="Redondeo"
             value={
-              design.cardOpacity
+              design.radius
             }
-            min={10}
-            max={100}
-            suffix="%"
-            onChange={(value) =>
-              updateDesign(
-                "cardOpacity",
-                value
-              )
-            }
-          />
-
-          <RangeControl
-            label="Puntas redondeadas"
-            value={design.radius}
             min={0}
             max={40}
             suffix=" px"
@@ -1065,17 +1932,50 @@ function DesignStudio({
               )
             }
           />
+
+          <RangeField
+            label="Transparencia tarjetas"
+            value={
+              design.cardOpacity
+            }
+            min={20}
+            max={100}
+            suffix="%"
+            onChange={(value) =>
+              updateDesign(
+                "cardOpacity",
+                value
+              )
+            }
+          />
+
+          <RangeField
+            label="Ancho del menú"
+            value={
+              design.sidebarWidth
+            }
+            min={200}
+            max={350}
+            suffix=" px"
+            onChange={(value) =>
+              updateDesign(
+                "sidebarWidth",
+                value
+              )
+            }
+          />
         </DesignGroup>
 
         <DesignGroup title="Tipografía">
-          <SelectControl
+          <SelectField
             label="Títulos"
-            value={design.titleFont}
+            value={
+              design.titleFont
+            }
             options={[
-              ["Georgia", "Georgia"],
-              ["Times", "Times New Roman"],
-              ["Arial", "Arial"],
-              ["Helvetica", "Helvetica"],
+              "Georgia",
+              "Arial",
+              "Helvetica",
             ]}
             onChange={(value) =>
               updateDesign(
@@ -1085,15 +1985,18 @@ function DesignStudio({
             }
           />
 
-          <RangeControl
-            label="Tamaño del título"
-            value={design.titleSize}
-            min={30}
-            max={90}
-            suffix=" px"
+          <SelectField
+            label="Texto"
+            value={
+              design.bodyFont
+            }
+            options={[
+              "Arial",
+              "Georgia",
+            ]}
             onChange={(value) =>
               updateDesign(
-                "titleSize",
+                "bodyFont",
                 value
               )
             }
@@ -1101,6 +2004,92 @@ function DesignStudio({
         </DesignGroup>
       </div>
     </section>
+  );
+}
+
+/*
+================================
+COMPONENTES
+================================
+*/
+
+function EditableText({
+  tag = "div",
+  value,
+  onChange,
+  className = "",
+}) {
+  const Tag = tag;
+
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (
+      ref.current &&
+      ref.current.innerText !==
+        value
+    ) {
+      ref.current.innerText =
+        value;
+    }
+  }, [value]);
+
+  return (
+    <Tag
+      ref={ref}
+      className={
+        `${className} editableText`
+      }
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(e) =>
+        onChange(
+          e.currentTarget.innerText
+        )
+      }
+    />
+  );
+}
+
+function SimplePage({
+  eyebrow,
+  title,
+  description,
+  children,
+}) {
+  return (
+    <section className="page">
+      <div className="eyebrow">
+        {eyebrow}
+      </div>
+
+      <h1 className="pageTitle">
+        {title}
+      </h1>
+
+      <p className="pageSubtitle">
+        {description}
+      </p>
+
+      <div className="pageBody">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function ArchiveCard({
+  title,
+  number,
+}) {
+  return (
+    <div className="archiveCard">
+      <span>{title}</span>
+
+      <strong>
+        {number}
+      </strong>
+    </div>
   );
 }
 
@@ -1116,16 +2105,16 @@ function DesignGroup({
   );
 }
 
-function ColorControl({
+function ColorField({
   label,
   value,
   onChange,
 }) {
   return (
-    <div className="designerField">
+    <div className="field">
       <label>{label}</label>
 
-      <div className="colorRow">
+      <div className="colorField">
         <input
           type="color"
           value={value}
@@ -1136,13 +2125,15 @@ function ColorControl({
           }
         />
 
-        <span>{value}</span>
+        <span>
+          {value}
+        </span>
       </div>
     </div>
   );
 }
 
-function RangeControl({
+function RangeField({
   label,
   value,
   min,
@@ -1151,9 +2142,11 @@ function RangeControl({
   onChange,
 }) {
   return (
-    <div className="designerField">
-      <div className="rangeLabel">
-        <label>{label}</label>
+    <div className="field">
+      <div className="fieldTop">
+        <label>
+          {label}
+        </label>
 
         <span>
           {value}
@@ -1178,14 +2171,14 @@ function RangeControl({
   );
 }
 
-function SelectControl({
+function SelectField({
   label,
   value,
   options,
   onChange,
 }) {
   return (
-    <div className="designerField">
+    <div className="field">
       <label>{label}</label>
 
       <select
@@ -1197,12 +2190,16 @@ function SelectControl({
         }
       >
         {options.map(
-          ([value, name]) => (
+          (option) => (
             <option
-              key={value}
-              value={value}
+              key={
+                option
+              }
+              value={
+                option
+              }
             >
-              {name}
+              {option}
             </option>
           )
         )}
@@ -1211,80 +2208,34 @@ function SelectControl({
   );
 }
 
-function StatCard({
-  label,
-  number,
-}) {
-  return (
-    <div className="statCard">
-      <span>{label}</span>
-      <strong>{number}</strong>
-    </div>
-  );
-}
+function formatDate(value) {
+  if (!value) return "";
 
-function InterviewQuestion({
-  title,
-  text,
-}) {
-  return (
-    <div className="questionCard">
-      <strong>{title}</strong>
-      <span>{text}</span>
-    </div>
-  );
-}
-
-function SectionPage({
-  kicker,
-  title,
-  description,
-  children,
-}) {
-  return (
-    <section className="sectionPage">
-      <div className="eyebrow">
-        {kicker}
-      </div>
-
-      <h1>{title}</h1>
-
-      <p className="sectionDescription">
-        {description}
-      </p>
-
-      <div className="sectionBody">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function ArchiveBox({
-  title,
-  value,
-}) {
-  return (
-    <div className="archiveBox">
-      <span>{title}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+  try {
+    return new Date(
+      value
+    ).toLocaleDateString(
+      "es-AR",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }
+    );
+  } catch {
+    return "";
+  }
 }
 
 function hexToRgba(
   hex,
   opacity = 1
 ) {
-  if (!hex) {
-    return `rgba(0,0,0,${opacity})`;
-  }
-
-  const clean =
+  const value =
     hex.replace("#", "");
 
   const bigint =
-    parseInt(clean, 16);
+    parseInt(value, 16);
 
   const r =
     (bigint >> 16) & 255;
@@ -1295,5 +2246,5 @@ function hexToRgba(
   const b =
     bigint & 255;
 
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  return `rgba(${r},${g},${b},${opacity})`;
 }
