@@ -779,9 +779,7 @@ export default function Home() {
 
     let uploaded = 0;
 
-    for (
-      const file of files
-    ) {
+    for (const file of files) {
       try {
         const cleanName =
           file.name.replace(
@@ -796,9 +794,7 @@ export default function Home() {
               2
             )}-${cleanName}`;
 
-        const {
-          error,
-        } =
+        const { error } =
           await supabase.storage
             .from(
               "memorias"
@@ -1536,6 +1532,105 @@ body.nqs-lock {
   color: var(--secondary);
 }
 
+.designTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 30px;
+  margin-bottom: 34px;
+}
+
+.designGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.designGroup {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 24px;
+}
+
+.designGroup h3 {
+  margin: 0 0 22px;
+  font-family: var(--title-font);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 20px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.fieldTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fieldTop span {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.field input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--text);
+  background: rgba(0,0,0,.25);
+  border: 1px solid var(--border);
+  border-radius: var(--button-radius);
+}
+
+.colorField {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.colorField input[type="color"] {
+  width: 54px;
+  height: 42px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+}
+
+.colorField span {
+  color: var(--secondary);
+  font-size: 12px;
+}
+
+.designPreview {
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
 @media(max-width:800px) {
   .nqsRecorderTitle {
     font-size: 34px;
@@ -1574,6 +1669,14 @@ body.nqs-lock {
 
   .nqsDraftResume {
     flex-direction: column;
+  }
+
+  .designTop {
+    flex-direction: column;
+  }
+
+  .designGrid {
+    grid-template-columns: 1fr;
   }
 }
 `}</style>
@@ -3669,27 +3772,37 @@ function DesignPage({
 }) {
   return (
     <section className="page">
-      <div className="eyebrow">
-        PERSONALIZACIÓN
+      <div className="designTop">
+        <div>
+          <div className="eyebrow">
+            PERSONALIZACIÓN
+          </div>
+
+          <h1 className="pageTitle">
+            Diseño
+          </h1>
+
+          <p className="pageSubtitle">
+            Personalizá completamente la apariencia de NO SE QUIEN SOY.
+            Todos los cambios se guardan automáticamente.
+          </p>
+        </div>
+
+        <button
+          className="secondaryButton"
+          onClick={
+            restorePremium
+          }
+        >
+          Restaurar diseño PREMIUM
+        </button>
       </div>
 
-      <h1 className="pageTitle">
-        Diseño
-      </h1>
-
-      <button
-        className="secondaryButton"
-        onClick={
-          restorePremium
-        }
-      >
-        Restaurar PREMIUM
-      </button>
-
       <div className="designGrid">
-        <DesignGroup title="Fondo">
+
+        <DesignGroup title="Fondo general">
           <ColorField
-            label="Color"
+            label="Color de fondo"
             value={
               design.background
             }
@@ -3701,31 +3814,83 @@ function DesignPage({
             }
           />
 
-          <button
-            className="secondaryButton"
-            onClick={() =>
-              backgroundInput.current?.click()
-            }
-          >
-            Subir imagen de fondo
-          </button>
+          <div className="field">
+            <label>
+              Imagen de fondo
+            </label>
 
-          <input
-            ref={
-              backgroundInput
+            <button
+              className="secondaryButton"
+              onClick={() =>
+                backgroundInput.current?.click()
+              }
+            >
+              Subir imagen
+            </button>
+
+            {design.backgroundImage && (
+              <button
+                className="secondaryButton"
+                onClick={() =>
+                  updateDesign(
+                    "backgroundImage",
+                    ""
+                  )
+                }
+              >
+                Quitar imagen
+              </button>
+            )}
+
+            <input
+              ref={
+                backgroundInput
+              }
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={
+                uploadBackground
+              }
+            />
+          </div>
+
+          <RangeField
+            label="Visibilidad de la imagen"
+            value={
+              design.backgroundOpacity
             }
-            hidden
-            type="file"
-            accept="image/*"
-            onChange={
-              uploadBackground
+            min={0}
+            max={100}
+            suffix="%"
+            onChange={(value) =>
+              updateDesign(
+                "backgroundOpacity",
+                value
+              )
+            }
+          />
+
+          <RangeField
+            label="Desenfoque del fondo"
+            value={
+              design.backgroundBlur
+            }
+            min={0}
+            max={20}
+            suffix=" px"
+            onChange={(value) =>
+              updateDesign(
+                "backgroundBlur",
+                value
+              )
             }
           />
         </DesignGroup>
 
-        <DesignGroup title="Colores">
+        <DesignGroup title="Paleta de colores">
           <ColorField
-            label="Principal"
+            label="Color principal"
             value={
               design.accent
             }
@@ -3738,7 +3903,7 @@ function DesignPage({
           />
 
           <ColorField
-            label="Texto"
+            label="Texto principal"
             value={
               design.text
             }
@@ -3749,7 +3914,259 @@ function DesignPage({
               )
             }
           />
+
+          <ColorField
+            label="Texto secundario"
+            value={
+              design.secondary
+            }
+            onChange={(value) =>
+              updateDesign(
+                "secondary",
+                value
+              )
+            }
+          />
+
+          <ColorField
+            label="Tarjetas"
+            value={
+              design.card
+            }
+            onChange={(value) =>
+              updateDesign(
+                "card",
+                value
+              )
+            }
+          />
+
+          <ColorField
+            label="Menú lateral"
+            value={
+              design.sidebar
+            }
+            onChange={(value) =>
+              updateDesign(
+                "sidebar",
+                value
+              )
+            }
+          />
+
+          <ColorField
+            label="Bordes"
+            value={
+              design.border
+            }
+            onChange={(value) =>
+              updateDesign(
+                "border",
+                value
+              )
+            }
+          />
         </DesignGroup>
+
+        <DesignGroup title="Tarjetas y paneles">
+          <RangeField
+            label="Transparencia"
+            value={
+              design.cardOpacity
+            }
+            min={20}
+            max={100}
+            suffix="%"
+            onChange={(value) =>
+              updateDesign(
+                "cardOpacity",
+                value
+              )
+            }
+          />
+
+          <RangeField
+            label="Redondeo de tarjetas"
+            value={
+              design.radius
+            }
+            min={0}
+            max={40}
+            suffix=" px"
+            onChange={(value) =>
+              updateDesign(
+                "radius",
+                value
+              )
+            }
+          />
+
+          <RangeField
+            label="Redondeo de botones"
+            value={
+              design.buttonRadius
+            }
+            min={0}
+            max={30}
+            suffix=" px"
+            onChange={(value) =>
+              updateDesign(
+                "buttonRadius",
+                value
+              )
+            }
+          />
+        </DesignGroup>
+
+        <DesignGroup title="Estructura">
+          <RangeField
+            label="Ancho del menú lateral"
+            value={
+              design.sidebarWidth
+            }
+            min={200}
+            max={360}
+            suffix=" px"
+            onChange={(value) =>
+              updateDesign(
+                "sidebarWidth",
+                value
+              )
+            }
+          />
+
+          <RangeField
+            label="Ancho máximo del contenido"
+            value={
+              design.contentWidth
+            }
+            min={800}
+            max={1600}
+            suffix=" px"
+            onChange={(value) =>
+              updateDesign(
+                "contentWidth",
+                value
+              )
+            }
+          />
+        </DesignGroup>
+
+        <DesignGroup title="Tipografía">
+          <SelectField
+            label="Fuente de títulos"
+            value={
+              design.titleFont
+            }
+            options={[
+              "Georgia",
+              "Arial",
+              "Helvetica",
+            ]}
+            onChange={(value) =>
+              updateDesign(
+                "titleFont",
+                value
+              )
+            }
+          />
+
+          <SelectField
+            label="Fuente general"
+            value={
+              design.bodyFont
+            }
+            options={[
+              "Arial",
+              "Georgia",
+              "Helvetica",
+            ]}
+            onChange={(value) =>
+              updateDesign(
+                "bodyFont",
+                value
+              )
+            }
+          />
+        </DesignGroup>
+
+        <DesignGroup title="Vista previa">
+          <div
+            className="designPreview"
+            style={{
+              background:
+                hexToRgba(
+                  design.card,
+                  design.cardOpacity /
+                    100
+                ),
+              borderRadius:
+                `${design.radius}px`,
+              borderColor:
+                design.border,
+            }}
+          >
+            <div
+              style={{
+                color:
+                  design.accent,
+                fontSize: 10,
+                letterSpacing:
+                  ".2em",
+                marginBottom: 12,
+              }}
+            >
+              NO SE QUIEN SOY
+            </div>
+
+            <div
+              style={{
+                color:
+                  design.text,
+                fontFamily:
+                  design.titleFont ===
+                  "Georgia"
+                    ? "Georgia, serif"
+                    : `${design.titleFont}, sans-serif`,
+                fontSize: 28,
+                marginBottom: 12,
+              }}
+            >
+              Una historia que merece ser contada
+            </div>
+
+            <p
+              style={{
+                color:
+                  design.secondary,
+                lineHeight: 1.6,
+              }}
+            >
+              Esta vista te permite ver en tiempo real cómo quedan los colores,
+              la transparencia, los bordes, las tipografías y el estilo general.
+            </p>
+
+            <button
+              style={{
+                marginTop: 12,
+                minHeight: 44,
+                padding:
+                  "0 18px",
+                border:
+                  `1px solid ${design.accent}`,
+                borderRadius:
+                  `${design.buttonRadius}px`,
+                background:
+                  design.accent,
+                color: "#111",
+                fontWeight: 700,
+              }}
+            >
+              Botón de ejemplo
+            </button>
+          </div>
+        </DesignGroup>
+
       </div>
     </section>
   );
@@ -3884,6 +4301,83 @@ function ColorField({
           {value}
         </span>
       </div>
+    </div>
+  );
+}
+
+function RangeField({
+  label,
+  value,
+  min,
+  max,
+  suffix = "",
+  onChange,
+}) {
+  return (
+    <div className="field">
+      <div className="fieldTop">
+        <label>
+          {label}
+        </label>
+
+        <span>
+          {value}
+          {suffix}
+        </span>
+      </div>
+
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(event) =>
+          onChange(
+            Number(
+              event.target.value
+            )
+          )
+        }
+      />
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}) {
+  return (
+    <div className="field">
+      <label>
+        {label}
+      </label>
+
+      <select
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value
+          )
+        }
+      >
+        {options.map(
+          (option) => (
+            <option
+              key={
+                option
+              }
+              value={
+                option
+              }
+            >
+              {option}
+            </option>
+          )
+        )}
+      </select>
     </div>
   );
 }
