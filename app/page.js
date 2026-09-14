@@ -4,7 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getSupabase } from "../lib/supabase";
 
-const MENU = ["Inicio", "Mi Historia", "El Libro", "Personas", "Archivo", "Podcast", "Diseño"];
+const MENU = [
+  "Inicio",
+  "Mi Historia",
+  "El Libro",
+  "Personas",
+  "Archivo",
+  "Podcast",
+  "Diseño",
+];
 
 const DEFAULT_DESIGN = {
   background: "#0b0b0b",
@@ -32,11 +40,14 @@ const DEFAULT_TEXTS = {
   homeSubtitle:
     "Contá la historia como la recordás. La aplicación conserva cada recuerdo original y te ayuda a transformarlo en un libro.",
   historyTitle: "Contá la historia",
-  historySubtitle: "Podés escribir un recuerdo o contarlo con tu propia voz.",
+  historySubtitle:
+    "Podés escribir un recuerdo o contarlo con tu propia voz.",
   bookTitle: "El Libro",
-  bookSubtitle: "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
+  bookSubtitle:
+    "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
   podcastTitle: "Podcast",
-  podcastSubtitle: "Convertí historias, capítulos y recuerdos en episodios de audio.",
+  podcastSubtitle:
+    "Convertí historias, capítulos y recuerdos en episodios de audio.",
 };
 
 export default function Home() {
@@ -86,11 +97,17 @@ export default function Home() {
       const savedTexts = localStorage.getItem("nqs_texts");
 
       if (savedDesign) {
-        setDesign({ ...DEFAULT_DESIGN, ...JSON.parse(savedDesign) });
+        setDesign({
+          ...DEFAULT_DESIGN,
+          ...JSON.parse(savedDesign),
+        });
       }
 
       if (savedTexts) {
-        setTexts({ ...DEFAULT_TEXTS, ...JSON.parse(savedTexts) });
+        setTexts({
+          ...DEFAULT_TEXTS,
+          ...JSON.parse(savedTexts),
+        });
       }
     } catch {}
   }
@@ -111,11 +128,16 @@ export default function Home() {
       if (!foundProject) {
         const created = await supabase
           .from("projects")
-          .insert({ title: "NO SE QUIEN SOY" })
+          .insert({
+            title: "NO SE QUIEN SOY",
+          })
           .select()
           .single();
 
-        if (created.error) throw created.error;
+        if (created.error) {
+          throw created.error;
+        }
+
         foundProject = created.data;
       }
 
@@ -129,7 +151,10 @@ export default function Home() {
         ]);
       }
     } catch (error) {
-      flash("No se pudo conectar con Supabase: " + error.message);
+      flash(
+        "No se pudo conectar con Supabase: " +
+          error.message
+      );
     }
 
     setLoading(false);
@@ -140,7 +165,9 @@ export default function Home() {
       .from("stories")
       .select("*")
       .eq("project_id", projectId)
-      .order("created_at", { ascending: false });
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error) {
       console.error(error);
@@ -157,7 +184,9 @@ export default function Home() {
       .from("chapters")
       .select("*")
       .eq("project_id", projectId)
-      .order("created_at", { ascending: true });
+      .order("created_at", {
+        ascending: true,
+      });
 
     if (error) {
       console.error(error);
@@ -175,41 +204,71 @@ export default function Home() {
     setMediaLoading(true);
 
     try {
-      let { data: mediaRows, error: mediaError } = await supabase
+      let {
+        data: mediaRows,
+        error: mediaError,
+      } = await supabase
         .from("media")
         .select("*")
         .eq("project_id", projectId);
 
       if (mediaError) {
         throw new Error(
-          "No se pudo leer la tabla media: " + mediaError.message
+          "No se pudo leer la tabla media: " +
+            mediaError.message
         );
       }
 
-      const folders = ["archivo", "audio", "podcast"];
-      const knownPaths = new Set((mediaRows || []).map((row) => row.storage_path));
+      const folders = [
+        "archivo",
+        "audio",
+        "podcast",
+      ];
+
+      const knownPaths = new Set(
+        (mediaRows || []).map(
+          (row) => row.storage_path
+        )
+      );
+
       const missingRows = [];
 
       for (const folder of folders) {
-        const basePath = `${projectId}/${folder}`;
+        const basePath =
+          `${projectId}/${folder}`;
 
-        const { data: storageItems, error: storageError } = await supabase.storage
+        const {
+          data: storageItems,
+          error: storageError,
+        } = await supabase.storage
           .from("memorias")
           .list(basePath, {
             limit: 1000,
-            sortBy: { column: "created_at", order: "desc" },
+            sortBy: {
+              column: "created_at",
+              order: "desc",
+            },
           });
 
         if (storageError) {
-          console.error(`Error leyendo ${folder}:`, storageError);
+          console.error(
+            `Error leyendo ${folder}:`,
+            storageError
+          );
           continue;
         }
 
         for (const item of storageItems || []) {
-          if (!item?.name || !item?.id) continue;
+          if (!item?.name || !item?.id) {
+            continue;
+          }
 
-          const storagePath = `${basePath}/${item.name}`;
-          if (knownPaths.has(storagePath)) continue;
+          const storagePath =
+            `${basePath}/${item.name}`;
+
+          if (knownPaths.has(storagePath)) {
+            continue;
+          }
 
           const mime =
             item?.metadata?.mimetype ||
@@ -229,12 +288,17 @@ export default function Home() {
       }
 
       if (missingRows.length > 0) {
-        const { error: backfillError } = await supabase
+        const {
+          error: backfillError,
+        } = await supabase
           .from("media")
           .insert(missingRows);
 
         if (backfillError) {
-          console.error("No se pudieron registrar archivos antiguos:", backfillError);
+          console.error(
+            "No se pudieron registrar archivos antiguos:",
+            backfillError
+          );
         } else {
           const refreshed = await supabase
             .from("media")
@@ -252,15 +316,29 @@ export default function Home() {
       for (const row of mediaRows || []) {
         const signed = await supabase.storage
           .from("memorias")
-          .createSignedUrl(row.storage_path, 60 * 60);
+          .createSignedUrl(
+            row.storage_path,
+            60 * 60
+          );
 
         if (signed.error) {
-          console.error("No se pudo crear URL:", signed.error);
+          console.error(
+            "No se pudo crear URL:",
+            signed.error
+          );
           continue;
         }
 
-        const folder = row.storage_path?.split("/")?.[1] || "archivo";
-        const mime = row.file_type || guessMimeFromName(row.file_name);
+        const folder =
+          row.storage_path
+            ?.split("/")
+            ?.[1] || "archivo";
+
+        const mime =
+          row.file_type ||
+          guessMimeFromName(
+            row.file_name
+          );
 
         collected.push({
           ...row,
@@ -268,15 +346,25 @@ export default function Home() {
           name: row.file_name,
           folder,
           mime,
-          url: signed.data?.signedUrl || "",
+          url:
+            signed.data?.signedUrl ||
+            "",
         });
       }
 
       setMediaFiles(collected);
       return collected;
     } catch (error) {
-      console.error("Error cargando archivos:", error);
-      flash(error?.message || "No se pudo cargar el archivo fotográfico.");
+      console.error(
+        "Error cargando archivos:",
+        error
+      );
+
+      flash(
+        error?.message ||
+          "No se pudo cargar el archivo fotográfico."
+      );
+
       return [];
     } finally {
       setMediaLoading(false);
@@ -288,49 +376,74 @@ export default function Home() {
     currentStories = stories,
     currentChapters = chapters
   ) {
-    if (!memoryText?.trim()) return;
+    if (!memoryText?.trim()) {
+      return;
+    }
 
     setEditorLoading(true);
     setEditorError("");
     setEditorProposal(null);
 
     try {
-      const response = await fetch("/api/editor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "memory",
-          memory: memoryText,
-          memories: currentStories || [],
-          chapters: currentChapters || [],
-        }),
-      });
+      const response = await fetch(
+        "/api/editor",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            mode: "memory",
+            memory: memoryText,
+            memories:
+              currentStories || [],
+            chapters:
+              currentChapters || [],
+          }),
+        }
+      );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.error || "Claude no pudo analizar el recuerdo.");
+        throw new Error(
+          data?.error ||
+            "Claude no pudo analizar el recuerdo."
+        );
       }
 
       setEditorProposal(data.result);
-      flash("La IA Editora terminó de analizar el recuerdo.");
+
+      flash(
+        "La IA Editora terminó de analizar el recuerdo."
+      );
     } catch (error) {
       setEditorError(
-        error?.message || "No se pudo conectar con la IA Editora."
+        error?.message ||
+          "No se pudo conectar con la IA Editora."
       );
     } finally {
       setEditorLoading(false);
     }
   }
 
-  async function saveStory({ title, text }) {
+  async function saveStory({
+    title,
+    text,
+  }) {
     if (!text.trim()) {
-      flash("Escribí el recuerdo antes de guardarlo.");
+      flash(
+        "Escribí el recuerdo antes de guardarlo."
+      );
       return false;
     }
 
     if (!project?.id) {
-      flash("El proyecto todavía no está listo.");
+      flash(
+        "El proyecto todavía no está listo."
+      );
       return false;
     }
 
@@ -339,48 +452,82 @@ export default function Home() {
     setEditorProposal(null);
 
     try {
-      const memoryText = text.trim();
+      const memoryText =
+        text.trim();
 
-      const { data: savedStory, error } = await supabase
+      const {
+        data: savedStory,
+        error,
+      } = await supabase
         .from("stories")
         .insert({
           project_id: project.id,
-          title: title.trim() || "Recuerdo sin título",
+          title:
+            title.trim() ||
+            "Recuerdo sin título",
           original_text: memoryText,
           source_type: "written",
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      const refreshedStories = await loadStories(project.id);
-      const refreshedChapters = await loadChapters(project.id);
+      const refreshedStories =
+        await loadStories(
+          project.id
+        );
+
+      const refreshedChapters =
+        await loadChapters(
+          project.id
+        );
 
       setLastMemory(memoryText);
       setLoading(false);
 
-      flash("Recuerdo guardado. La IA Editora lo está analizando.");
+      flash(
+        "Recuerdo guardado. La IA Editora lo está analizando."
+      );
 
       await analyzeWithEditor(
         memoryText,
-        refreshedStories || [savedStory, ...stories],
-        refreshedChapters || chapters
+        refreshedStories ||
+          [
+            savedStory,
+            ...stories,
+          ],
+        refreshedChapters ||
+          chapters
       );
 
       return true;
     } catch (error) {
       setLoading(false);
-      flash("No se pudo guardar: " + error.message);
+
+      flash(
+        "No se pudo guardar: " +
+          error.message
+      );
+
       return false;
     }
   }
 
   async function deleteStory(id) {
-    const ok = window.confirm("¿Eliminar este recuerdo?");
+    const ok =
+      window.confirm(
+        "¿Eliminar este recuerdo?"
+      );
+
     if (!ok) return;
 
-    const { error } = await supabase.from("stories").delete().eq("id", id);
+    const { error } = await supabase
+      .from("stories")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       flash(error.message);
@@ -388,14 +535,19 @@ export default function Home() {
     }
 
     await loadStories(project.id);
-    flash("Recuerdo eliminado.");
+
+    flash(
+      "Recuerdo eliminado."
+    );
   }
 
   function updateEditorText(value) {
-    setEditorProposal((previous) => ({
-      ...previous,
-      proposed_text: value,
-    }));
+    setEditorProposal(
+      (previous) => ({
+        ...previous,
+        proposed_text: value,
+      })
+    );
   }
 
   function discardEditorProposal() {
@@ -406,93 +558,169 @@ export default function Home() {
 
   async function retryEditor() {
     if (!lastMemory) {
-      flash("No hay un recuerdo para volver a analizar.");
+      flash(
+        "No hay un recuerdo para volver a analizar."
+      );
       return;
     }
 
-    await analyzeWithEditor(lastMemory, stories, chapters);
+    await analyzeWithEditor(
+      lastMemory,
+      stories,
+      chapters
+    );
   }
 
   async function insertChapter(row) {
-    let result = await supabase.from("chapters").insert(row);
+    let result =
+      await supabase
+        .from("chapters")
+        .insert(row);
 
     if (
       result.error &&
-      Object.prototype.hasOwnProperty.call(row, "chapter_number")
+      Object.prototype.hasOwnProperty.call(
+        row,
+        "chapter_number"
+      )
     ) {
-      const { chapter_number, ...fallback } = row;
-      result = await supabase.from("chapters").insert(fallback);
+      const {
+        chapter_number,
+        ...fallback
+      } = row;
+
+      result =
+        await supabase
+          .from("chapters")
+          .insert(fallback);
     }
 
     return result;
   }
 
   async function acceptEditorProposal() {
-    if (!editorProposal || !project?.id) return;
+    if (
+      !editorProposal ||
+      !project?.id
+    ) {
+      return;
+    }
 
-    const proposedText = editorProposal.proposed_text?.trim();
+    const proposedText =
+      editorProposal
+        .proposed_text
+        ?.trim();
 
     if (!proposedText) {
-      flash("La propuesta no tiene texto.");
+      flash(
+        "La propuesta no tiene texto."
+      );
       return;
     }
 
     setLoading(true);
 
     try {
-      let targetChapter = null;
+      let targetChapter =
+        null;
 
-      if (editorProposal.chapter_id) {
+      if (
+        editorProposal.chapter_id
+      ) {
         targetChapter =
           chapters.find(
             (chapter) =>
-              String(chapter.id) === String(editorProposal.chapter_id)
+              String(
+                chapter.id
+              ) ===
+              String(
+                editorProposal
+                  .chapter_id
+              )
           ) || null;
       }
 
       if (
         !targetChapter &&
-        editorProposal.recommended_action === "existing_chapter" &&
-        editorProposal.chapter_title
+        editorProposal
+          .recommended_action ===
+          "existing_chapter" &&
+        editorProposal
+          .chapter_title
       ) {
         targetChapter =
           chapters.find(
             (chapter) =>
-              normalizeText(chapter.title) ===
-              normalizeText(editorProposal.chapter_title)
+              normalizeText(
+                chapter.title
+              ) ===
+              normalizeText(
+                editorProposal
+                  .chapter_title
+              )
           ) || null;
       }
 
       if (targetChapter) {
-        const updatedContent = targetChapter.content
-          ? `${targetChapter.content}\n\n${proposedText}`
-          : proposedText;
+        const updatedContent =
+          targetChapter.content
+            ? `${targetChapter.content}\n\n${proposedText}`
+            : proposedText;
 
-        const { error } = await supabase
-          .from("chapters")
-          .update({ content: updatedContent })
-          .eq("id", targetChapter.id);
+        const { error } =
+          await supabase
+            .from("chapters")
+            .update({
+              content:
+                updatedContent,
+            })
+            .eq(
+              "id",
+              targetChapter.id
+            );
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
       } else {
-        const nextNumber = chapters.length + 1;
+        const nextNumber =
+          chapters.length + 1;
 
-        const result = await insertChapter({
-          project_id: project.id,
-          chapter_number: nextNumber,
-          title: editorProposal.chapter_title || `Capítulo ${nextNumber}`,
-          content: proposedText,
-        });
+        const result =
+          await insertChapter({
+            project_id:
+              project.id,
+            chapter_number:
+              nextNumber,
+            title:
+              editorProposal
+                .chapter_title ||
+              `Capítulo ${nextNumber}`,
+            content:
+              proposedText,
+          });
 
-        if (result.error) throw result.error;
+        if (result.error) {
+          throw result.error;
+        }
       }
 
-      await loadChapters(project.id);
+      await loadChapters(
+        project.id
+      );
+
       discardEditorProposal();
-      flash("La propuesta fue incorporada al libro.");
+
+      flash(
+        "La propuesta fue incorporada al libro."
+      );
+
       setActive("El Libro");
     } catch (error) {
-      flash("No se pudo incorporar al libro: " + error.message);
+      flash(
+        "No se pudo incorporar al libro: " +
+          error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -501,62 +729,117 @@ export default function Home() {
   async function createChapter() {
     if (!project?.id) return;
 
-    const number = chapters.length + 1;
+    const number =
+      chapters.length + 1;
 
-    const result = await insertChapter({
-      project_id: project.id,
-      chapter_number: number,
-      title: `Capítulo ${number}`,
-      content: "",
-    });
+    const result =
+      await insertChapter({
+        project_id: project.id,
+        chapter_number: number,
+        title:
+          `Capítulo ${number}`,
+        content: "",
+      });
 
     if (result.error) {
-      flash("No se pudo crear el capítulo: " + result.error.message);
+      flash(
+        "No se pudo crear el capítulo: " +
+          result.error.message
+      );
+
       return;
     }
 
-    await loadChapters(project.id);
-    flash("Capítulo creado.");
-  }
-
-  async function updateChapter(id, field, value) {
-    setChapters((previous) =>
-      previous.map((chapter) =>
-        chapter.id === id ? { ...chapter, [field]: value } : chapter
-      )
+    await loadChapters(
+      project.id
     );
 
-    const { error } = await supabase
-      .from("chapters")
-      .update({ [field]: value })
-      .eq("id", id);
+    flash(
+      "Capítulo creado."
+    );
+  }
+
+  async function updateChapter(
+    id,
+    field,
+    value
+  ) {
+    setChapters(
+      (previous) =>
+        previous.map(
+          (chapter) =>
+            chapter.id === id
+              ? {
+                  ...chapter,
+                  [field]: value,
+                }
+              : chapter
+        )
+    );
+
+    const { error } =
+      await supabase
+        .from("chapters")
+        .update({
+          [field]: value,
+        })
+        .eq("id", id);
 
     if (error) {
-      flash("No se pudo actualizar el capítulo.");
+      flash(
+        "No se pudo actualizar el capítulo."
+      );
     }
   }
 
   async function deleteChapter(id) {
-    const ok = window.confirm("¿Eliminar este capítulo?");
+    const ok =
+      window.confirm(
+        "¿Eliminar este capítulo?"
+      );
+
     if (!ok) return;
 
-    const { error } = await supabase.from("chapters").delete().eq("id", id);
+    const { error } =
+      await supabase
+        .from("chapters")
+        .delete()
+        .eq("id", id);
 
     if (error) {
       flash(error.message);
       return;
     }
 
-    await loadChapters(project.id);
-    flash("Capítulo eliminado.");
+    await loadChapters(
+      project.id
+    );
+
+    flash(
+      "Capítulo eliminado."
+    );
   }
 
-  async function uploadFiles(files, type = "archivo") {
-    if (!files?.length) return { uploaded: 0, failed: 0 };
+  async function uploadFiles(
+    files,
+    type = "archivo"
+  ) {
+    if (!files?.length) {
+      return {
+        uploaded: 0,
+        failed: 0,
+      };
+    }
 
     if (!project?.id) {
-      flash("El proyecto todavía no terminó de cargar.");
-      return { uploaded: 0, failed: files.length };
+      flash(
+        "El proyecto todavía no terminó de cargar."
+      );
+
+      return {
+        uploaded: 0,
+        failed: files.length,
+      };
     }
 
     setUploadingFiles(true);
@@ -565,44 +848,81 @@ export default function Home() {
     let failed = 0;
     const errors = [];
 
-    for (let index = 0; index < files.length; index++) {
-      const file = files[index];
+    for (
+      let index = 0;
+      index < files.length;
+      index++
+    ) {
+      const file =
+        files[index];
 
       try {
-        if (!file?.name) throw new Error("Archivo inválido.");
+        if (!file?.name) {
+          throw new Error(
+            "Archivo inválido."
+          );
+        }
 
-        const cleanName = file.name
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-zA-Z0-9._-]/g, "_");
+        const cleanName =
+          file.name
+            .normalize("NFD")
+            .replace(
+              /[\u0300-\u036f]/g,
+              ""
+            )
+            .replace(
+              /[^a-zA-Z0-9._-]/g,
+              "_"
+            );
 
-        const uniqueId = `${Date.now()}-${index}-${Math.random()
-          .toString(36)
-          .slice(2, 10)}`;
+        const uniqueId =
+          `${Date.now()}-${index}-${Math.random()
+            .toString(36)
+            .slice(2, 10)}`;
 
-        const path = `${project.id}/${type}/${uniqueId}-${cleanName}`;
+        const path =
+          `${project.id}/${type}/${uniqueId}-${cleanName}`;
 
-        const { error: storageError } = await supabase.storage
+        const {
+          error: storageError,
+        } = await supabase.storage
           .from("memorias")
-          .upload(path, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type || undefined,
-          });
+          .upload(
+            path,
+            file,
+            {
+              cacheControl: "3600",
+              upsert: false,
+              contentType:
+                file.type ||
+                undefined,
+            }
+          );
 
         if (storageError) {
           failed++;
-          errors.push(`${file.name}: ${storageError.message}`);
+
+          errors.push(
+            `${file.name}: ${storageError.message}`
+          );
+
           continue;
         }
 
-        const { error: mediaError } = await supabase
+        const {
+          error: mediaError,
+        } = await supabase
           .from("media")
           .insert({
-            project_id: project.id,
+            project_id:
+              project.id,
             storage_path: path,
             file_name: cleanName,
-            file_type: file.type || guessMimeFromName(cleanName),
+            file_type:
+              file.type ||
+              guessMimeFromName(
+                cleanName
+              ),
             photo_date: null,
           });
 
@@ -616,108 +936,351 @@ export default function Home() {
         uploaded++;
       } catch (error) {
         failed++;
+
         errors.push(
-          `${file?.name || "Archivo"}: ${error?.message || "Error desconocido"}`
+          `${
+            file?.name ||
+            "Archivo"
+          }: ${
+            error?.message ||
+            "Error desconocido"
+          }`
         );
       }
     }
 
     setUploadingFiles(false);
+
     await loadMedia(project.id);
 
-    if (uploaded > 0 && failed === 0) {
+    if (
+      uploaded > 0 &&
+      failed === 0
+    ) {
       flash(
         uploaded === 1
           ? "Archivo subido correctamente."
           : `${uploaded} archivos subidos correctamente.`
       );
-    } else if (uploaded > 0 && failed > 0) {
-      flash(`${uploaded} archivos subidos. ${failed} no pudieron cargarse.`);
+    } else if (
+      uploaded > 0 &&
+      failed > 0
+    ) {
+      flash(
+        `${uploaded} archivos subidos. ${failed} no pudieron cargarse.`
+      );
     } else if (failed > 0) {
-      flash("No se pudo subir: " + (errors[0] || "Supabase rechazó la carga."));
+      flash(
+        "No se pudo subir: " +
+          (
+            errors[0] ||
+            "Supabase rechazó la carga."
+          )
+      );
     }
 
-    return { uploaded, failed, errors };
+    return {
+      uploaded,
+      failed,
+      errors,
+    };
   }
 
-  async function handleMediaInput(event, type = "archivo") {
-    const input = event.currentTarget;
-    const files = Array.from(input.files || []);
+  async function handleMediaInput(
+    event,
+    type = "archivo"
+  ) {
+    const input =
+      event.currentTarget;
 
-    if (!files.length) return;
+    const files =
+      Array.from(
+        input.files || []
+      );
 
-    await uploadFiles(files, type);
+    if (!files.length) {
+      return;
+    }
+
+    await uploadFiles(
+      files,
+      type
+    );
+
     input.value = "";
   }
 
   async function deleteMedia(item) {
     if (!item?.path) return;
 
-    const ok = window.confirm("¿Eliminar este archivo?");
+    const ok =
+      window.confirm(
+        "¿Eliminar este archivo?"
+      );
+
     if (!ok) return;
 
-    const { error: storageError } = await supabase.storage
+    const {
+      error: storageError,
+    } = await supabase.storage
       .from("memorias")
-      .remove([item.path]);
+      .remove([
+        item.path,
+      ]);
 
     if (storageError) {
-      flash("No se pudo eliminar: " + storageError.message);
+      flash(
+        "No se pudo eliminar: " +
+          storageError.message
+      );
+
       return;
     }
 
-    const deleteQuery = item.id
-      ? supabase.from("media").delete().eq("id", item.id)
-      : supabase.from("media").delete().eq("storage_path", item.path);
+    const deleteQuery =
+      item.id
+        ? supabase
+            .from("media")
+            .delete()
+            .eq(
+              "id",
+              item.id
+            )
+        : supabase
+            .from("media")
+            .delete()
+            .eq(
+              "storage_path",
+              item.path
+            );
 
-    const { error: mediaError } = await deleteQuery;
+    const {
+      error: mediaError,
+    } = await deleteQuery;
 
     if (mediaError) {
-      console.error("No se pudo borrar el registro media:", mediaError);
+      console.error(
+        "No se pudo borrar el registro media:",
+        mediaError
+      );
     }
 
-    await loadMedia(project.id);
-    flash("Archivo eliminado.");
-  }
-
-  async function updateMediaDate(item, value) {
-    if (!item?.id) {
-      flash("Este archivo todavía no tiene registro editable.");
-      return;
-    }
-
-    const photoDate = value || null;
-
-    setMediaFiles((previous) =>
-      previous.map((file) =>
-        file.id === item.id ? { ...file, photo_date: photoDate } : file
-      )
+    await loadMedia(
+      project.id
     );
 
-    const { error } = await supabase
-      .from("media")
-      .update({ photo_date: photoDate })
-      .eq("id", item.id);
+    flash(
+      "Archivo eliminado."
+    );
+  }
 
-    if (error) {
-      flash("No se pudo guardar la fecha: " + error.message);
-      await loadMedia(project.id);
+  async function deleteManyMedia(items) {
+    if (!items?.length) {
       return;
     }
 
-    flash(photoDate ? "Fecha guardada." : "Fecha eliminada.");
+    const ok =
+      window.confirm(
+        `¿Eliminar definitivamente ${items.length} archivo${
+          items.length === 1
+            ? ""
+            : "s"
+        }?`
+      );
+
+    if (!ok) return;
+
+    try {
+      const paths =
+        items
+          .map(
+            (item) =>
+              item.path
+          )
+          .filter(Boolean);
+
+      if (!paths.length) {
+        return;
+      }
+
+      const {
+        error: storageError,
+      } = await supabase.storage
+        .from("memorias")
+        .remove(paths);
+
+      if (storageError) {
+        throw new Error(
+          "No se pudieron borrar los archivos: " +
+            storageError.message
+        );
+      }
+
+      const ids =
+        items
+          .map(
+            (item) =>
+              item.id
+          )
+          .filter(Boolean);
+
+      if (ids.length) {
+        const {
+          error: mediaError,
+        } = await supabase
+          .from("media")
+          .delete()
+          .in("id", ids);
+
+        if (mediaError) {
+          console.error(
+            "Los archivos se borraron del Storage, pero hubo un problema limpiando media:",
+            mediaError
+          );
+        }
+      }
+
+      const pathsWithoutId =
+        items
+          .filter(
+            (item) =>
+              !item.id &&
+              item.path
+          )
+          .map(
+            (item) =>
+              item.path
+          );
+
+      if (
+        pathsWithoutId.length
+      ) {
+        const {
+          error:
+            pathDeleteError,
+        } = await supabase
+          .from("media")
+          .delete()
+          .in(
+            "storage_path",
+            pathsWithoutId
+          );
+
+        if (
+          pathDeleteError
+        ) {
+          console.error(
+            "No se pudieron limpiar algunos registros media:",
+            pathDeleteError
+          );
+        }
+      }
+
+      await loadMedia(
+        project.id
+      );
+
+      flash(
+        `${items.length} archivo${
+          items.length === 1
+            ? ""
+            : "s"
+        } eliminado${
+          items.length === 1
+            ? ""
+            : "s"
+        }.`
+      );
+    } catch (error) {
+      flash(
+        error?.message ||
+          "No se pudieron eliminar los archivos seleccionados."
+      );
+    }
   }
 
-  function useRecordedTranscript(transcript, file) {
+  async function updateMediaDate(
+    item,
+    value
+  ) {
+    if (!item?.id) {
+      flash(
+        "Este archivo todavía no tiene registro editable."
+      );
+      return;
+    }
+
+    const photoDate =
+      value || null;
+
+    setMediaFiles(
+      (previous) =>
+        previous.map(
+          (file) =>
+            file.id ===
+            item.id
+              ? {
+                  ...file,
+                  photo_date:
+                    photoDate,
+                }
+              : file
+        )
+    );
+
+    const { error } =
+      await supabase
+        .from("media")
+        .update({
+          photo_date:
+            photoDate,
+        })
+        .eq(
+          "id",
+          item.id
+        );
+
+    if (error) {
+      flash(
+        "No se pudo guardar la fecha: " +
+          error.message
+      );
+
+      await loadMedia(
+        project.id
+      );
+
+      return;
+    }
+
+    flash(
+      photoDate
+        ? "Fecha guardada."
+        : "Fecha eliminada."
+    );
+  }
+
+  function useRecordedTranscript(
+    transcript,
+    file
+  ) {
     if (file) {
-      uploadFiles([file], "audio");
+      uploadFiles(
+        [file],
+        "audio"
+      );
     }
 
     setDraftSeed({
       id: Date.now(),
-      text: transcript || "",
+      text:
+        transcript || "",
     });
 
-    setActive("Mi Historia");
+    setActive(
+      "Mi Historia"
+    );
+
     setRecorderOpen(false);
 
     flash(
@@ -725,111 +1288,198 @@ export default function Home() {
     );
   }
 
-  function updateDesign(key, value) {
-    setDesign((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
+  function updateDesign(
+    key,
+    value
+  ) {
+    setDesign(
+      (previous) => ({
+        ...previous,
+        [key]: value,
+      })
+    );
   }
 
-  function updateText(key, value) {
-    setTexts((previous) => ({
-      ...previous,
-      [key]: value,
-    }));
+  function updateText(
+    key,
+    value
+  ) {
+    setTexts(
+      (previous) => ({
+        ...previous,
+        [key]: value,
+      })
+    );
   }
 
   function restorePremium() {
-    setDesign(DEFAULT_DESIGN);
-    setTexts(DEFAULT_TEXTS);
+    setDesign(
+      DEFAULT_DESIGN
+    );
 
-    flash("Diseño PREMIUM restaurado.");
+    setTexts(
+      DEFAULT_TEXTS
+    );
+
+    flash(
+      "Diseño PREMIUM restaurado."
+    );
   }
 
   function uploadBackground(event) {
-    const file = event.target.files?.[0];
+    const file =
+      event.target
+        .files?.[0];
+
     if (!file) return;
 
-    const reader = new FileReader();
+    const reader =
+      new FileReader();
 
-    reader.onload = () => {
-      updateDesign("backgroundImage", reader.result);
-    };
+    reader.onload =
+      () => {
+        updateDesign(
+          "backgroundImage",
+          reader.result
+        );
+      };
 
-    reader.readAsDataURL(file);
-    event.target.value = "";
+    reader.readAsDataURL(
+      file
+    );
+
+    event.target.value =
+      "";
   }
 
   function flash(message) {
     setNotice(message);
 
-    setTimeout(() => {
-      setNotice("");
-    }, 4000);
+    setTimeout(
+      () => {
+        setNotice("");
+      },
+      4000
+    );
   }
 
   const variables = {
-    "--bg": design.background,
-    "--sidebar": design.sidebar,
-    "--card": hexToRgba(design.card, design.cardOpacity / 100),
-    "--accent": design.accent,
-    "--text": design.text,
-    "--secondary": design.secondary,
-    "--border": design.border,
-    "--radius": `${design.radius}px`,
-    "--button-radius": `${design.buttonRadius}px`,
-    "--sidebar-width": `${design.sidebarWidth}px`,
-    "--content-width": `${design.contentWidth}px`,
-    "--background-image": design.backgroundImage
-      ? `url("${design.backgroundImage}")`
-      : "none",
-    "--background-opacity": design.backgroundOpacity / 100,
-    "--background-blur": `blur(${design.backgroundBlur}px)`,
+    "--bg":
+      design.background,
+    "--sidebar":
+      design.sidebar,
+    "--card":
+      hexToRgba(
+        design.card,
+        design.cardOpacity /
+          100
+      ),
+    "--accent":
+      design.accent,
+    "--text":
+      design.text,
+    "--secondary":
+      design.secondary,
+    "--border":
+      design.border,
+    "--radius":
+      `${design.radius}px`,
+    "--button-radius":
+      `${design.buttonRadius}px`,
+    "--sidebar-width":
+      `${design.sidebarWidth}px`,
+    "--content-width":
+      `${design.contentWidth}px`,
+    "--background-image":
+      design.backgroundImage
+        ? `url("${design.backgroundImage}")`
+        : "none",
+    "--background-opacity":
+      design.backgroundOpacity /
+      100,
+    "--background-blur":
+      `blur(${design.backgroundBlur}px)`,
     "--title-font":
-      design.titleFont === "Arial"
+      design.titleFont ===
+      "Arial"
         ? "Arial, Helvetica, sans-serif"
-        : design.titleFont === "Helvetica"
+        : design.titleFont ===
+            "Helvetica"
           ? "Helvetica, Arial, sans-serif"
           : 'Georgia, "Times New Roman", serif',
     "--body-font":
-      design.bodyFont === "Georgia"
+      design.bodyFont ===
+      "Georgia"
         ? 'Georgia, "Times New Roman", serif'
-        : design.bodyFont === "Helvetica"
+        : design.bodyFont ===
+            "Helvetica"
           ? "Helvetica, Arial, sans-serif"
           : "Arial, Helvetica, sans-serif",
   };
 
   return (
-    <div className="appShell" style={variables}>
+    <div
+      className="appShell"
+      style={variables}
+    >
       <GlobalOverlayStyles />
+
       <div className="wallpaper" />
 
-      {notice && <div className="notice">{notice}</div>}
+      {notice && (
+        <div className="notice">
+          {notice}
+        </div>
+      )}
 
       {recorderOpen && (
         <VoiceRecorder
-          onClose={() => setRecorderOpen(false)}
-          onUse={useRecordedTranscript}
+          onClose={() =>
+            setRecorderOpen(
+              false
+            )
+          }
+          onUse={
+            useRecordedTranscript
+          }
         />
       )}
 
       <aside className="sidebar">
         <EditableText
           className="brand"
-          value={texts.projectName}
-          onChange={(value) => updateText("projectName", value)}
+          value={
+            texts.projectName
+          }
+          onChange={(value) =>
+            updateText(
+              "projectName",
+              value
+            )
+          }
         />
 
         <nav className="navigation">
-          {MENU.map((item) => (
-            <button
-              key={item}
-              className={active === item ? "navItem active" : "navItem"}
-              onClick={() => setActive(item)}
-            >
-              {item}
-            </button>
-          ))}
+          {MENU.map(
+            (item) => (
+              <button
+                key={item}
+                className={
+                  active ===
+                  item
+                    ? "navItem active"
+                    : "navItem"
+                }
+                onClick={() =>
+                  setActive(
+                    item
+                  )
+                }
+              >
+                {item}
+              </button>
+            )
+          )}
         </nav>
 
         <div className="sidebarFooter">
@@ -838,55 +1488,127 @@ export default function Home() {
       </aside>
 
       <main className="mainContent">
-        {active === "Inicio" && (
+        {active ===
+          "Inicio" && (
           <HomePage
             texts={texts}
-            updateText={updateText}
-            storyCount={stories.length}
-            chapterCount={chapters.length}
-            mediaCount={mediaFiles.length}
-            goHistory={() => setActive("Mi Historia")}
-            goBook={() => setActive("El Libro")}
-            openRecorder={() => setRecorderOpen(true)}
-            mediaInput={mediaInput}
-            handleMediaInput={handleMediaInput}
-            uploadingFiles={uploadingFiles}
+            updateText={
+              updateText
+            }
+            storyCount={
+              stories.length
+            }
+            chapterCount={
+              chapters.length
+            }
+            mediaCount={
+              mediaFiles.length
+            }
+            goHistory={() =>
+              setActive(
+                "Mi Historia"
+              )
+            }
+            goBook={() =>
+              setActive(
+                "El Libro"
+              )
+            }
+            openRecorder={() =>
+              setRecorderOpen(
+                true
+              )
+            }
+            mediaInput={
+              mediaInput
+            }
+            handleMediaInput={
+              handleMediaInput
+            }
+            uploadingFiles={
+              uploadingFiles
+            }
           />
         )}
 
-        {active === "Mi Historia" && (
+        {active ===
+          "Mi Historia" && (
           <HistoryPage
             texts={texts}
-            updateText={updateText}
-            stories={stories}
-            saveStory={saveStory}
-            deleteStory={deleteStory}
-            loading={loading}
-            openRecorder={() => setRecorderOpen(true)}
-            editorLoading={editorLoading}
-            editorProposal={editorProposal}
-            editorError={editorError}
-            updateEditorText={updateEditorText}
-            acceptEditorProposal={acceptEditorProposal}
-            discardEditorProposal={discardEditorProposal}
-            retryEditor={retryEditor}
-            draftSeed={draftSeed}
+            updateText={
+              updateText
+            }
+            stories={
+              stories
+            }
+            saveStory={
+              saveStory
+            }
+            deleteStory={
+              deleteStory
+            }
+            loading={
+              loading
+            }
+            openRecorder={() =>
+              setRecorderOpen(
+                true
+              )
+            }
+            editorLoading={
+              editorLoading
+            }
+            editorProposal={
+              editorProposal
+            }
+            editorError={
+              editorError
+            }
+            updateEditorText={
+              updateEditorText
+            }
+            acceptEditorProposal={
+              acceptEditorProposal
+            }
+            discardEditorProposal={
+              discardEditorProposal
+            }
+            retryEditor={
+              retryEditor
+            }
+            draftSeed={
+              draftSeed
+            }
           />
         )}
 
-        {active === "El Libro" && (
+        {active ===
+          "El Libro" && (
           <BookPage
             texts={texts}
-            updateText={updateText}
-            chapters={chapters}
-            createChapter={createChapter}
-            updateChapter={updateChapter}
-            deleteChapter={deleteChapter}
-            stories={stories}
+            updateText={
+              updateText
+            }
+            chapters={
+              chapters
+            }
+            createChapter={
+              createChapter
+            }
+            updateChapter={
+              updateChapter
+            }
+            deleteChapter={
+              deleteChapter
+            }
+            stories={
+              stories
+            }
           />
         )}
 
-        {active === "Personas" && (
+        {active ===
+          "Personas" && (
           <SimplePage
             eyebrow="PERSONAJES"
             title="Personas"
@@ -899,38 +1621,82 @@ export default function Home() {
           </SimplePage>
         )}
 
-        {active === "Archivo" && (
+        {active ===
+          "Archivo" && (
           <ArchivePage
-            stories={stories}
-            chapters={chapters}
-            mediaFiles={mediaFiles}
-            mediaLoading={mediaLoading}
-            mediaInput={mediaInput}
-            handleMediaInput={handleMediaInput}
-            uploadingFiles={uploadingFiles}
-            deleteMedia={deleteMedia}
-            updateMediaDate={updateMediaDate}
-            refreshMedia={() => loadMedia(project?.id)}
+            stories={
+              stories
+            }
+            chapters={
+              chapters
+            }
+            mediaFiles={
+              mediaFiles
+            }
+            mediaLoading={
+              mediaLoading
+            }
+            mediaInput={
+              mediaInput
+            }
+            handleMediaInput={
+              handleMediaInput
+            }
+            uploadingFiles={
+              uploadingFiles
+            }
+            deleteMedia={
+              deleteMedia
+            }
+            deleteManyMedia={
+              deleteManyMedia
+            }
+            updateMediaDate={
+              updateMediaDate
+            }
+            refreshMedia={() =>
+              loadMedia(
+                project?.id
+              )
+            }
           />
         )}
 
-        {active === "Podcast" && (
+        {active ===
+          "Podcast" && (
           <PodcastPage
             texts={texts}
-            updateText={updateText}
-            podcastInput={podcastInput}
-            handleMediaInput={handleMediaInput}
-            uploadingFiles={uploadingFiles}
+            updateText={
+              updateText
+            }
+            podcastInput={
+              podcastInput
+            }
+            handleMediaInput={
+              handleMediaInput
+            }
+            uploadingFiles={
+              uploadingFiles
+            }
           />
         )}
 
-        {active === "Diseño" && (
+        {active ===
+          "Diseño" && (
           <DesignPage
             design={design}
-            updateDesign={updateDesign}
-            restorePremium={restorePremium}
-            backgroundInput={backgroundInput}
-            uploadBackground={uploadBackground}
+            updateDesign={
+              updateDesign
+            }
+            restorePremium={
+              restorePremium
+            }
+            backgroundInput={
+              backgroundInput
+            }
+            uploadBackground={
+              uploadBackground
+            }
           />
         )}
       </main>
@@ -1470,6 +2236,75 @@ body.nqs-lock {
   line-height: 1.35;
 }
 
+.mediaCardSelected {
+  border: 2px solid var(--accent);
+  box-shadow:
+    0 0 0 3px
+    rgba(221,201,158,.12);
+}
+
+.mediaCard.selectionMode {
+  cursor: pointer;
+  user-select: none;
+}
+
+.mediaSelectCircle {
+  position: absolute;
+  z-index: 10;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.75);
+  background: rgba(0,0,0,.72);
+  color: #111;
+  font-size: 18px;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.mediaSelectCircle.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.deleteSelectedButton {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: var(--button-radius);
+  border: 1px solid #a84e4e;
+  background: rgba(168,78,78,.18);
+  color: #f0b2b2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.deleteSelectedButton:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.selectionBar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  margin: 14px 0 4px;
+  box-sizing: border-box;
+  border: 1px solid rgba(221,201,158,.24);
+  border-radius: var(--radius);
+  background: rgba(221,201,158,.07);
+}
+
+.selectionBar strong {
+  color: var(--text);
+}
+
 .mediaEmpty {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
@@ -1529,6 +2364,11 @@ body.nqs-lock {
   .mediaGrid {
     grid-template-columns: repeat(2,minmax(0,1fr));
   }
+
+  .selectionBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media(max-width:520px) {
@@ -1540,42 +2380,112 @@ body.nqs-lock {
   );
 }
 
-function VoiceRecorder({ onClose, onUse }) {
-  const [portalReady, setPortalReady] = useState(false);
-  const [recorder, setRecorder] = useState(null);
-  const [stream, setStream] = useState(null);
-  const [status, setStatus] = useState("idle");
-  const [seconds, setSeconds] = useState(0);
-  const [audioUrl, setAudioUrl] = useState("");
-  const [audioFile, setAudioFile] = useState(null);
-  const [transcribing, setTranscribing] = useState(false);
-  const [error, setError] = useState("");
+function VoiceRecorder({
+  onClose,
+  onUse,
+}) {
+  const [
+    portalReady,
+    setPortalReady,
+  ] = useState(false);
 
-  const chunksRef = useRef([]);
-  const timerRef = useRef(null);
+  const [
+    recorder,
+    setRecorder,
+  ] = useState(null);
+
+  const [
+    stream,
+    setStream,
+  ] = useState(null);
+
+  const [
+    status,
+    setStatus,
+  ] = useState("idle");
+
+  const [
+    seconds,
+    setSeconds,
+  ] = useState(0);
+
+  const [
+    audioUrl,
+    setAudioUrl,
+  ] = useState("");
+
+  const [
+    audioFile,
+    setAudioFile,
+  ] = useState(null);
+
+  const [
+    transcribing,
+    setTranscribing,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const chunksRef =
+    useRef([]);
+
+  const timerRef =
+    useRef(null);
 
   useEffect(() => {
     setPortalReady(true);
 
-    document.documentElement.classList.add("nqs-lock");
-    document.body.classList.add("nqs-lock");
+    document.documentElement
+      .classList.add(
+        "nqs-lock"
+      );
+
+    document.body.classList.add(
+      "nqs-lock"
+    );
 
     return () => {
-      document.documentElement.classList.remove("nqs-lock");
-      document.body.classList.remove("nqs-lock");
+      document.documentElement
+        .classList.remove(
+          "nqs-lock"
+        );
 
-      clearInterval(timerRef.current);
+      document.body.classList.remove(
+        "nqs-lock"
+      );
 
-      stream?.getTracks()?.forEach((track) => track.stop());
+      clearInterval(
+        timerRef.current
+      );
+
+      stream
+        ?.getTracks()
+        ?.forEach(
+          (track) =>
+            track.stop()
+        );
 
       if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
+        URL.revokeObjectURL(
+          audioUrl
+        );
       }
     };
-  }, [stream, audioUrl]);
+  }, [
+    stream,
+    audioUrl,
+  ]);
 
   function bestMimeType() {
-    if (typeof MediaRecorder === "undefined") return "";
+    if (
+      typeof MediaRecorder ===
+      "undefined"
+    ) {
+      return "";
+    }
 
     const options = [
       "audio/mp4",
@@ -1584,7 +2494,13 @@ function VoiceRecorder({ onClose, onUse }) {
     ];
 
     return (
-      options.find((type) => MediaRecorder.isTypeSupported?.(type)) || ""
+      options.find(
+        (type) =>
+          MediaRecorder
+            .isTypeSupported?.(
+              type
+            )
+      ) || ""
     );
   }
 
@@ -1592,69 +2508,126 @@ function VoiceRecorder({ onClose, onUse }) {
     setError("");
 
     try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Este navegador no permite acceder al micrófono.");
+      if (
+        !navigator
+          .mediaDevices
+          ?.getUserMedia
+      ) {
+        throw new Error(
+          "Este navegador no permite acceder al micrófono."
+        );
       }
 
-      const micStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+      const micStream =
+        await navigator
+          .mediaDevices
+          .getUserMedia({
+            audio: true,
+          });
 
-      const mimeType = bestMimeType();
+      const mimeType =
+        bestMimeType();
 
-      const newRecorder = mimeType
-        ? new MediaRecorder(micStream, { mimeType })
-        : new MediaRecorder(micStream);
+      const newRecorder =
+        mimeType
+          ? new MediaRecorder(
+              micStream,
+              {
+                mimeType,
+              }
+            )
+          : new MediaRecorder(
+              micStream
+            );
 
       chunksRef.current = [];
 
-      newRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
+      newRecorder.ondataavailable =
+        (event) => {
+          if (
+            event.data &&
+            event.data.size > 0
+          ) {
+            chunksRef.current.push(
+              event.data
+            );
+          }
+        };
 
-      newRecorder.onstop = () => {
-        const type =
-          newRecorder.mimeType ||
-          mimeType ||
-          "audio/webm";
+      newRecorder.onstop =
+        () => {
+          const type =
+            newRecorder
+              .mimeType ||
+            mimeType ||
+            "audio/webm";
 
-        const blob = new Blob(chunksRef.current, { type });
+          const blob =
+            new Blob(
+              chunksRef.current,
+              {
+                type,
+              }
+            );
 
-        const extension = type.includes("mp4")
-          ? "m4a"
-          : "webm";
+          const extension =
+            type.includes("mp4")
+              ? "m4a"
+              : "webm";
 
-        const file = new File(
-          [blob],
-          `recuerdo-${Date.now()}.${extension}`,
-          { type }
-        );
+          const file =
+            new File(
+              [blob],
+              `recuerdo-${Date.now()}.${extension}`,
+              {
+                type,
+              }
+            );
 
-        const url = URL.createObjectURL(blob);
+          const url =
+            URL.createObjectURL(
+              blob
+            );
 
-        setAudioFile(file);
-        setAudioUrl(url);
-        setStatus("finished");
+          setAudioFile(file);
+          setAudioUrl(url);
 
-        micStream
-          .getTracks()
-          .forEach((track) => track.stop());
+          setStatus(
+            "finished"
+          );
 
-        clearInterval(timerRef.current);
-      };
+          micStream
+            .getTracks()
+            .forEach(
+              (track) =>
+                track.stop()
+            );
+
+          clearInterval(
+            timerRef.current
+          );
+        };
 
       newRecorder.start(1000);
 
       setStream(micStream);
       setRecorder(newRecorder);
       setSeconds(0);
-      setStatus("recording");
 
-      timerRef.current = setInterval(() => {
-        setSeconds((previous) => previous + 1);
-      }, 1000);
+      setStatus(
+        "recording"
+      );
+
+      timerRef.current =
+        setInterval(
+          () => {
+            setSeconds(
+              (previous) =>
+                previous + 1
+            );
+          },
+          1000
+        );
     } catch (err) {
       setError(
         err?.message ||
@@ -1664,26 +2637,52 @@ function VoiceRecorder({ onClose, onUse }) {
   }
 
   function pauseRecording() {
-    if (recorder?.state === "recording") {
+    if (
+      recorder?.state ===
+      "recording"
+    ) {
       recorder.pause();
-      setStatus("paused");
-      clearInterval(timerRef.current);
+
+      setStatus(
+        "paused"
+      );
+
+      clearInterval(
+        timerRef.current
+      );
     }
   }
 
   function resumeRecording() {
-    if (recorder?.state === "paused") {
+    if (
+      recorder?.state ===
+      "paused"
+    ) {
       recorder.resume();
-      setStatus("recording");
 
-      timerRef.current = setInterval(() => {
-        setSeconds((previous) => previous + 1);
-      }, 1000);
+      setStatus(
+        "recording"
+      );
+
+      timerRef.current =
+        setInterval(
+          () => {
+            setSeconds(
+              (previous) =>
+                previous + 1
+            );
+          },
+          1000
+        );
     }
   }
 
   function stopRecording() {
-    if (recorder && recorder.state !== "inactive") {
+    if (
+      recorder &&
+      recorder.state !==
+        "inactive"
+    ) {
       recorder.stop();
     }
   }
@@ -1695,7 +2694,8 @@ function VoiceRecorder({ onClose, onUse }) {
     setError("");
 
     try {
-      const form = new FormData();
+      const form =
+        new FormData();
 
       form.append(
         "audio",
@@ -1703,15 +2703,17 @@ function VoiceRecorder({ onClose, onUse }) {
         audioFile.name
       );
 
-      const response = await fetch(
-        "/api/transcribe",
-        {
-          method: "POST",
-          body: form,
-        }
-      );
+      const response =
+        await fetch(
+          "/api/transcribe",
+          {
+            method: "POST",
+            body: form,
+          }
+        );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -1720,7 +2722,8 @@ function VoiceRecorder({ onClose, onUse }) {
         );
       }
 
-      const transcript = data?.text?.trim();
+      const transcript =
+        data?.text?.trim();
 
       if (!transcript) {
         throw new Error(
@@ -1728,7 +2731,10 @@ function VoiceRecorder({ onClose, onUse }) {
         );
       }
 
-      onUse(transcript, audioFile);
+      onUse(
+        transcript,
+        audioFile
+      );
     } catch (err) {
       setError(
         err?.message ||
@@ -1742,26 +2748,34 @@ function VoiceRecorder({ onClose, onUse }) {
   function closeRecorder() {
     if (
       recorder &&
-      recorder.state !== "inactive"
+      recorder.state !==
+        "inactive"
     ) {
       recorder.stop();
     }
 
     stream
       ?.getTracks()
-      ?.forEach((track) => track.stop());
+      ?.forEach(
+        (track) =>
+          track.stop()
+      );
 
     onClose();
   }
 
-  if (!portalReady) return null;
+  if (!portalReady) {
+    return null;
+  }
 
   return createPortal(
     <div className="nqsOverlay">
       <div className="nqsOverlayTop">
         <button
           className="nqsOverlayBack"
-          onClick={closeRecorder}
+          onClick={
+            closeRecorder
+          }
         >
           ← Volver
         </button>
@@ -1777,7 +2791,8 @@ function VoiceRecorder({ onClose, onUse }) {
         <div className="nqsRecorderCard">
           <div
             className={
-              status === "recording"
+              status ===
+              "recording"
                 ? "nqsMicCircle recording"
                 : "nqsMicCircle"
             }
@@ -1794,82 +2809,109 @@ function VoiceRecorder({ onClose, onUse }) {
             convertimos en texto y Claude lo transforma en material para el libro.
           </p>
 
-          {status !== "idle" && (
+          {status !==
+            "idle" && (
             <div className="nqsTimer">
-              {formatTimer(seconds)}
+              {formatTimer(
+                seconds
+              )}
             </div>
           )}
 
-          {status === "idle" && (
+          {status ===
+            "idle" && (
             <button
               className="nqsRecButton nqsRecPrimary"
-              onClick={startRecording}
+              onClick={
+                startRecording
+              }
             >
               ● Iniciar grabación
             </button>
           )}
 
-          {status === "recording" && (
+          {status ===
+            "recording" && (
             <div className="nqsRecorderActions">
               <button
                 className="nqsRecButton nqsRecSecondary"
-                onClick={pauseRecording}
+                onClick={
+                  pauseRecording
+                }
               >
                 Ⅱ Pausar
               </button>
 
               <button
                 className="nqsRecButton nqsRecDanger"
-                onClick={stopRecording}
+                onClick={
+                  stopRecording
+                }
               >
                 ■ Finalizar
               </button>
             </div>
           )}
 
-          {status === "paused" && (
+          {status ===
+            "paused" && (
             <div className="nqsRecorderActions">
               <button
                 className="nqsRecButton nqsRecPrimary"
-                onClick={resumeRecording}
+                onClick={
+                  resumeRecording
+                }
               >
                 ▶ Continuar
               </button>
 
               <button
                 className="nqsRecButton nqsRecDanger"
-                onClick={stopRecording}
+                onClick={
+                  stopRecording
+                }
               >
                 ■ Finalizar
               </button>
             </div>
           )}
 
-          {status === "finished" && (
+          {status ===
+            "finished" && (
             <>
               {audioUrl && (
                 <audio
                   className="nqsAudioPreview"
                   controls
-                  src={audioUrl}
+                  src={
+                    audioUrl
+                  }
                 />
               )}
 
               <div
                 className="nqsRecorderActions"
-                style={{ marginTop: 24 }}
+                style={{
+                  marginTop: 24,
+                }}
               >
                 <button
                   className="nqsRecButton nqsRecSecondary"
-                  onClick={startRecording}
+                  onClick={
+                    startRecording
+                  }
                 >
                   Grabar de nuevo
                 </button>
 
                 <button
                   className="nqsRecButton nqsRecPrimary"
-                  disabled={transcribing}
-                  onClick={transcribe}
+                  disabled={
+                    transcribing
+                  }
+                  onClick={
+                    transcribe
+                  }
                 >
                   {transcribing
                     ? "Transcribiendo..."
@@ -1882,19 +2924,24 @@ function VoiceRecorder({ onClose, onUse }) {
           {error && (
             <p
               className="nqsRecorderStatus"
-              style={{ color: "#ef9e9e" }}
+              style={{
+                color:
+                  "#ef9e9e",
+              }}
             >
               {error}
             </p>
           )}
 
-          {status === "recording" && (
+          {status ===
+            "recording" && (
             <p className="nqsRecorderStatus">
               Micrófono activo · grabando
             </p>
           )}
 
-          {status === "paused" && (
+          {status ===
+            "paused" && (
             <p className="nqsRecorderStatus">
               Grabación pausada
             </p>
@@ -1935,32 +2982,46 @@ function HomePage({
         <EditableText
           tag="h1"
           className="mainTitle"
-          value={texts.homeTitle}
+          value={
+            texts.homeTitle
+          }
           onChange={(value) =>
-            updateText("homeTitle", value)
+            updateText(
+              "homeTitle",
+              value
+            )
           }
         />
 
         <EditableText
           tag="p"
           className="mainSubtitle"
-          value={texts.homeSubtitle}
+          value={
+            texts.homeSubtitle
+          }
           onChange={(value) =>
-            updateText("homeSubtitle", value)
+            updateText(
+              "homeSubtitle",
+              value
+            )
           }
         />
 
         <div className="mainActions">
           <button
             className="primaryButton hugeButton"
-            onClick={goHistory}
+            onClick={
+              goHistory
+            }
           >
             ✎ Escribir un recuerdo
           </button>
 
           <button
             className="secondaryButton hugeButton"
-            onClick={openRecorder}
+            onClick={
+              openRecorder
+            }
           >
             🎙 Contarlo con audio
           </button>
@@ -1968,7 +3029,10 @@ function HomePage({
       </section>
 
       <section className="workflow">
-        <Workflow n="01" title="Contás un recuerdo">
+        <Workflow
+          n="01"
+          title="Contás un recuerdo"
+        >
           Escribís o hablás libremente. No hace falta ordenar nada.
         </Workflow>
 
@@ -1976,7 +3040,10 @@ function HomePage({
           →
         </div>
 
-        <Workflow n="02" title="La IA lo analiza">
+        <Workflow
+          n="02"
+          title="La IA lo analiza"
+        >
           Claude detecta personas, lugares, períodos y dónde debería entrar en el libro.
         </Workflow>
 
@@ -1984,42 +3051,71 @@ function HomePage({
           →
         </div>
 
-        <Workflow n="03" title="Vos decidís">
+        <Workflow
+          n="03"
+          title="Vos decidís"
+        >
           Revisás la propuesta y recién entonces la incorporás al manuscrito.
         </Workflow>
       </section>
 
       <section className="homeStats">
         <div className="stat">
-          <small>RECUERDOS</small>
-          <strong>{storyCount}</strong>
+          <small>
+            RECUERDOS
+          </small>
+
+          <strong>
+            {storyCount}
+          </strong>
         </div>
 
         <div className="stat">
-          <small>CAPÍTULOS</small>
-          <strong>{chapterCount}</strong>
+          <small>
+            CAPÍTULOS
+          </small>
+
+          <strong>
+            {chapterCount}
+          </strong>
         </div>
 
         <div className="stat">
-          <small>ARCHIVOS</small>
-          <strong>{mediaCount}</strong>
+          <small>
+            ARCHIVOS
+          </small>
+
+          <strong>
+            {mediaCount}
+          </strong>
         </div>
 
         <button
           className="openBook"
-          onClick={goBook}
+          onClick={
+            goBook
+          }
         >
-          <span>EL LIBRO</span>
-          <strong>Ver cómo va quedando →</strong>
+          <span>
+            EL LIBRO
+          </span>
+
+          <strong>
+            Ver cómo va quedando →
+          </strong>
         </button>
       </section>
 
       <section className="quickArchive">
         <button
           className="uploadQuick"
-          disabled={uploadingFiles}
+          disabled={
+            uploadingFiles
+          }
           onClick={() =>
-            mediaInput.current?.click()
+            mediaInput
+              .current
+              ?.click()
           }
         >
           {uploadingFiles
@@ -2045,7 +3141,11 @@ function HomePage({
   );
 }
 
-function Workflow({ n, title, children }) {
+function Workflow({
+  n,
+  title,
+  children,
+}) {
   return (
     <div className="workflowCard">
       <span>{n}</span>
@@ -2072,10 +3172,25 @@ function HistoryPage({
   retryEditor,
   draftSeed,
 }) {
-  const [title, setTitle] = useState("");
-  const [text, setText] = useState("");
-  const [immersive, setImmersive] = useState(false);
-  const [portalReady, setPortalReady] = useState(false);
+  const [
+    title,
+    setTitle,
+  ] = useState("");
+
+  const [
+    text,
+    setText,
+  ] = useState("");
+
+  const [
+    immersive,
+    setImmersive,
+  ] = useState(false);
+
+  const [
+    portalReady,
+    setPortalReady,
+  ] = useState(false);
 
   useEffect(() => {
     setPortalReady(true);
@@ -2091,17 +3206,29 @@ function HistoryPage({
           "nqs_story_draft_text"
         );
 
-      if (savedTitle) setTitle(savedTitle);
-      if (savedText) setText(savedText);
+      if (savedTitle) {
+        setTitle(savedTitle);
+      }
+
+      if (savedText) {
+        setText(savedText);
+      }
     } catch {}
   }, []);
 
   useEffect(() => {
-    if (!draftSeed?.id) return;
+    if (!draftSeed?.id) {
+      return;
+    }
 
-    setText(draftSeed.text || "");
+    setText(
+      draftSeed.text || ""
+    );
+
     setImmersive(true);
-  }, [draftSeed?.id]);
+  }, [
+    draftSeed?.id,
+  ]);
 
   useEffect(() => {
     try {
@@ -2122,14 +3249,16 @@ function HistoryPage({
   }, [text]);
 
   async function save() {
-    const ok = await saveStory({
-      title,
-      text,
-    });
+    const ok =
+      await saveStory({
+        title,
+        text,
+      });
 
     if (ok) {
       setTitle("");
       setText("");
+
       setImmersive(false);
 
       try {
@@ -2155,12 +3284,18 @@ function HistoryPage({
             text={text}
             setText={setText}
             close={() =>
-              setImmersive(false)
+              setImmersive(
+                false
+              )
             }
             save={save}
             loading={loading}
-            editorLoading={editorLoading}
-            openRecorder={openRecorder}
+            editorLoading={
+              editorLoading
+            }
+            openRecorder={
+              openRecorder
+            }
           />,
           document.body
         )}
@@ -2172,7 +3307,9 @@ function HistoryPage({
       <EditableText
         tag="h1"
         className="pageTitle"
-        value={texts.historyTitle}
+        value={
+          texts.historyTitle
+        }
         onChange={(value) =>
           updateText(
             "historyTitle",
@@ -2184,7 +3321,9 @@ function HistoryPage({
       <EditableText
         tag="p"
         className="pageSubtitle"
-        value={texts.historySubtitle}
+        value={
+          texts.historySubtitle
+        }
         onChange={(value) =>
           updateText(
             "historySubtitle",
@@ -2202,7 +3341,9 @@ function HistoryPage({
 
             <button
               className="audioMini"
-              onClick={openRecorder}
+              onClick={
+                openRecorder
+              }
             >
               🎙 Grabar audio
             </button>
@@ -2285,14 +3426,19 @@ function HistoryPage({
             </strong>
 
             <small>
-              {countWords(text)} palabras · guardado automáticamente
+              {countWords(
+                text
+              )}{" "}
+              palabras · guardado automáticamente
             </small>
           </div>
 
           <button
             className="secondaryButton"
             onClick={() =>
-              setImmersive(true)
+              setImmersive(
+                true
+              )
             }
           >
             Continuar escribiendo
@@ -2301,13 +3447,27 @@ function HistoryPage({
       )}
 
       <EditorPanel
-        loading={editorLoading}
-        proposal={editorProposal}
-        error={editorError}
-        updateEditorText={updateEditorText}
-        accept={acceptEditorProposal}
-        discard={discardEditorProposal}
-        retry={retryEditor}
+        loading={
+          editorLoading
+        }
+        proposal={
+          editorProposal
+        }
+        error={
+          editorError
+        }
+        updateEditorText={
+          updateEditorText
+        }
+        accept={
+          acceptEditorProposal
+        }
+        discard={
+          discardEditorProposal
+        }
+        retry={
+          retryEditor
+        }
       />
 
       <div className="savedSection">
@@ -2327,7 +3487,8 @@ function HistoryPage({
           </strong>
         </div>
 
-        {stories.length === 0 ? (
+        {stories.length ===
+        0 ? (
           <div className="emptyPanel">
             Todavía no hay recuerdos.
           </div>
@@ -2393,25 +3554,31 @@ function ImmersiveWriter({
     useRef(null);
 
   useEffect(() => {
-    document.documentElement.classList.add(
-      "nqs-lock"
-    );
+    document.documentElement
+      .classList.add(
+        "nqs-lock"
+      );
 
     document.body.classList.add(
       "nqs-lock"
     );
 
     const timer =
-      setTimeout(() => {
-        textRef.current?.focus();
-      }, 150);
+      setTimeout(
+        () => {
+          textRef.current
+            ?.focus();
+        },
+        150
+      );
 
     return () => {
       clearTimeout(timer);
 
-      document.documentElement.classList.remove(
-        "nqs-lock"
-      );
+      document.documentElement
+        .classList.remove(
+          "nqs-lock"
+        );
 
       document.body.classList.remove(
         "nqs-lock"
@@ -2476,17 +3643,23 @@ function ImmersiveWriter({
             <div>
               <strong
                 style={{
-                  color: "#ddc99e",
+                  color:
+                    "#ddc99e",
                 }}
               >
-                {countWords(text)} palabras
+                {countWords(
+                  text
+                )}{" "}
+                palabras
               </strong>
             </div>
 
             <div className="nqsRecorderActions">
               <button
                 className="nqsRecButton nqsRecSecondary"
-                onClick={openRecorder}
+                onClick={
+                  openRecorder
+                }
               >
                 🎙 Audio
               </button>
@@ -2606,7 +3779,8 @@ function EditorPanel({
         style={{
           width: "100%",
           minHeight: 300,
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
           marginTop: 10,
           padding: 20,
           border:
@@ -2672,7 +3846,9 @@ function BookPage({
       <EditableText
         tag="h1"
         className="pageTitle"
-        value={texts.bookTitle}
+        value={
+          texts.bookTitle
+        }
         onChange={(value) =>
           updateText(
             "bookTitle",
@@ -2684,7 +3860,9 @@ function BookPage({
       <EditableText
         tag="p"
         className="pageSubtitle"
-        value={texts.bookSubtitle}
+        value={
+          texts.bookSubtitle
+        }
         onChange={(value) =>
           updateText(
             "bookSubtitle",
@@ -2716,13 +3894,16 @@ function BookPage({
 
         <button
           className="primaryButton"
-          onClick={createChapter}
+          onClick={
+            createChapter
+          }
         >
           + Nuevo capítulo
         </button>
       </div>
 
-      {chapters.length === 0 ? (
+      {chapters.length ===
+      0 ? (
         <div className="bookEmpty">
           <h2>
             El libro todavía está esperando su primer capítulo.
@@ -2736,17 +3917,27 @@ function BookPage({
               index
             ) => (
               <ChapterEditor
-                key={chapter.id}
-                chapter={chapter}
-                number={index + 1}
+                key={
+                  chapter.id
+                }
+                chapter={
+                  chapter
+                }
+                number={
+                  index + 1
+                }
                 updateChapter={
                   updateChapter
                 }
                 deleteChapter={
                   deleteChapter
                 }
-                stories={stories}
-                chapters={chapters}
+                stories={
+                  stories
+                }
+                chapters={
+                  chapters
+                }
               />
             )
           )}
@@ -2764,24 +3955,34 @@ function ChapterEditor({
   stories,
   chapters,
 }) {
-  const [title, setTitle] =
-    useState(
-      chapter.title || ""
-    );
+  const [
+    title,
+    setTitle,
+  ] = useState(
+    chapter.title || ""
+  );
 
-  const [content, setContent] =
-    useState(
-      chapter.content || ""
-    );
+  const [
+    content,
+    setContent,
+  ] = useState(
+    chapter.content || ""
+  );
 
-  const [aiLoading, setAiLoading] =
-    useState(false);
+  const [
+    aiLoading,
+    setAiLoading,
+  ] = useState(false);
 
-  const [aiProposal, setAiProposal] =
-    useState(null);
+  const [
+    aiProposal,
+    setAiProposal,
+  ] = useState(null);
 
-  const [aiError, setAiError] =
-    useState("");
+  const [
+    aiError,
+    setAiError,
+  ] = useState("");
 
   useEffect(() => {
     setTitle(
@@ -2794,34 +3995,40 @@ function ChapterEditor({
   }, [chapter]);
 
   async function runAI(action) {
-    if (!content.trim()) return;
+    if (!content.trim()) {
+      return;
+    }
 
     setAiLoading(true);
     setAiError("");
     setAiProposal(null);
 
     try {
-      const response = await fetch(
-        "/api/editor",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            mode: "chapter",
-            action,
-            chapter: {
-              ...chapter,
-              title,
-              content,
+      const response =
+        await fetch(
+          "/api/editor",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
             },
-            memories: stories,
-            chapters,
-          }),
-        }
-      );
+            body:
+              JSON.stringify({
+                mode:
+                  "chapter",
+                action,
+                chapter: {
+                  ...chapter,
+                  title,
+                  content,
+                },
+                memories:
+                  stories,
+                chapters,
+              }),
+          }
+        );
 
       const data =
         await response.json();
@@ -2833,9 +4040,13 @@ function ChapterEditor({
         );
       }
 
-      setAiProposal(data.result);
+      setAiProposal(
+        data.result
+      );
     } catch (error) {
-      setAiError(error.message);
+      setAiError(
+        error.message
+      );
     } finally {
       setAiLoading(false);
     }
@@ -2847,7 +4058,9 @@ function ChapterEditor({
         ?.proposed_text
         ?.trim();
 
-    if (!newText) return;
+    if (!newText) {
+      return;
+    }
 
     setContent(newText);
 
@@ -2864,7 +4077,9 @@ function ChapterEditor({
     <article className="chapterEditor">
       <div className="chapterNumber">
         CAPÍTULO{" "}
-        {String(number).padStart(
+        {String(
+          number
+        ).padStart(
           2,
           "0"
         )}
@@ -2961,7 +4176,9 @@ function ChapterEditor({
               <button
                 key={action}
                 className="secondaryButton"
-                disabled={aiLoading}
+                disabled={
+                  aiLoading
+                }
                 onClick={() =>
                   runAI(action)
                 }
@@ -2993,7 +4210,8 @@ function ChapterEditor({
             <textarea
               className="chapterContent"
               value={
-                aiProposal.proposed_text ||
+                aiProposal
+                  .proposed_text ||
                 ""
               }
               onChange={(event) =>
@@ -3001,7 +4219,9 @@ function ChapterEditor({
                   (previous) => ({
                     ...previous,
                     proposed_text:
-                      event.target.value,
+                      event
+                        .target
+                        .value,
                   })
                 )
               }
@@ -3017,7 +4237,9 @@ function ChapterEditor({
             <button
               className="secondaryButton"
               onClick={() =>
-                setAiProposal(null)
+                setAiProposal(
+                  null
+                )
               }
             >
               Descartar
@@ -3054,48 +4276,180 @@ function ArchivePage({
   handleMediaInput,
   uploadingFiles,
   deleteMedia,
+  deleteManyMedia,
   updateMediaDate,
   refreshMedia,
 }) {
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [
+    sortOrder,
+    setSortOrder,
+  ] = useState("asc");
 
-  const photosAndVideos = mediaFiles.filter(
-    (item) =>
-      item.mime?.startsWith("image/") ||
-      item.mime?.startsWith("video/")
-  );
+  const [
+    selectionMode,
+    setSelectionMode,
+  ] = useState(false);
 
-  const audios = mediaFiles.filter(
-    (item) =>
-      item.mime?.startsWith("audio/")
-  );
+  const [
+    selected,
+    setSelected,
+  ] = useState([]);
 
-  const sortedMedia = [...mediaFiles].sort((a, b) => {
-    const aDate = a.photo_date
-      ? new Date(`${a.photo_date}T00:00:00`).getTime()
-      : null;
+  const [
+    deletingMany,
+    setDeletingMany,
+  ] = useState(false);
 
-    const bDate = b.photo_date
-      ? new Date(`${b.photo_date}T00:00:00`).getTime()
-      : null;
+  const photosAndVideos =
+    mediaFiles.filter(
+      (item) =>
+        item.mime?.startsWith(
+          "image/"
+        ) ||
+        item.mime?.startsWith(
+          "video/"
+        )
+    );
 
-    if (aDate === null && bDate === null) {
-      const ac = new Date(a.created_at || 0).getTime();
-      const bc = new Date(b.created_at || 0).getTime();
-      return bc - ac;
+  const audios =
+    mediaFiles.filter(
+      (item) =>
+        item.mime?.startsWith(
+          "audio/"
+        )
+    );
+
+  const sortedMedia =
+    [...mediaFiles].sort(
+      (a, b) => {
+        const aDate =
+          a.photo_date
+            ? new Date(
+                `${a.photo_date}T00:00:00`
+              ).getTime()
+            : null;
+
+        const bDate =
+          b.photo_date
+            ? new Date(
+                `${b.photo_date}T00:00:00`
+              ).getTime()
+            : null;
+
+        if (
+          aDate === null &&
+          bDate === null
+        ) {
+          const ac =
+            new Date(
+              a.created_at ||
+                0
+            ).getTime();
+
+          const bc =
+            new Date(
+              b.created_at ||
+                0
+            ).getTime();
+
+          return bc - ac;
+        }
+
+        if (aDate === null) {
+          return 1;
+        }
+
+        if (bDate === null) {
+          return -1;
+        }
+
+        return sortOrder ===
+          "asc"
+          ? aDate - bDate
+          : bDate - aDate;
+      }
+    );
+
+  const withoutDate =
+    photosAndVideos.filter(
+      (item) =>
+        !item.photo_date
+    ).length;
+
+  function itemKey(item) {
+    return String(
+      item.id ||
+        item.path
+    );
+  }
+
+  function toggleSelected(item) {
+    const key =
+      itemKey(item);
+
+    setSelected(
+      (previous) =>
+        previous.includes(
+          key
+        )
+          ? previous.filter(
+              (id) =>
+                id !== key
+            )
+          : [
+              ...previous,
+              key,
+            ]
+    );
+  }
+
+  function selectAll() {
+    setSelected(
+      sortedMedia.map(
+        itemKey
+      )
+    );
+  }
+
+  function clearSelection() {
+    setSelected([]);
+    setSelectionMode(false);
+  }
+
+  async function removeSelected() {
+    const items =
+      mediaFiles.filter(
+        (item) =>
+          selected.includes(
+            itemKey(item)
+          )
+      );
+
+    if (!items.length) {
+      return;
     }
 
-    if (aDate === null) return 1;
-    if (bDate === null) return -1;
+    setDeletingMany(true);
 
-    return sortOrder === "asc"
-      ? aDate - bDate
-      : bDate - aDate;
-  });
+    try {
+      await deleteManyMedia(
+        items
+      );
 
-  const withoutDate = photosAndVideos.filter(
-    (item) => !item.photo_date
-  ).length;
+      setSelected([]);
+
+      setSelectionMode(
+        false
+      );
+    } finally {
+      setDeletingMany(false);
+    }
+  }
+
+  const allSelected =
+    sortedMedia.length > 0 &&
+    selected.length ===
+      sortedMedia.length;
 
   return (
     <SimplePage
@@ -3106,22 +4460,30 @@ function ArchivePage({
       <div className="archiveGrid">
         <ArchiveCard
           title="Recuerdos"
-          number={stories.length}
+          number={
+            stories.length
+          }
         />
 
         <ArchiveCard
           title="Capítulos"
-          number={chapters.length}
+          number={
+            chapters.length
+          }
         />
 
         <ArchiveCard
           title="Audios"
-          number={audios.length}
+          number={
+            audios.length
+          }
         />
 
         <ArchiveCard
           title="Fotos y videos"
-          number={photosAndVideos.length}
+          number={
+            photosAndVideos.length
+          }
         />
       </div>
 
@@ -3132,56 +4494,165 @@ function ArchivePage({
           </h2>
 
           <div className="mediaChronologyHint">
-            {withoutDate > 0
-              ? `${withoutDate} archivo${
-                  withoutDate === 1 ? "" : "s"
-                } visual${
-                  withoutDate === 1 ? "" : "es"
-                } todavía sin fecha.`
-              : "Toda la galería visual tiene fecha asignada."}
+            {selectionMode
+              ? `${selected.length} seleccionado${
+                  selected.length === 1
+                    ? ""
+                    : "s"
+                }`
+              : withoutDate > 0
+                ? `${withoutDate} archivo${
+                    withoutDate === 1
+                      ? ""
+                      : "s"
+                  } visual${
+                    withoutDate === 1
+                      ? ""
+                      : "es"
+                  } todavía sin fecha.`
+                : "Toda la galería visual tiene fecha asignada."}
           </div>
         </div>
 
         <div className="mediaToolbarActions">
-          <select
-            className="mediaSortSelect"
-            value={sortOrder}
-            onChange={(event) =>
-              setSortOrder(event.target.value)
-            }
-          >
-            <option value="asc">
-              Más antiguas primero
-            </option>
+          {!selectionMode ? (
+            <>
+              <select
+                className="mediaSortSelect"
+                value={
+                  sortOrder
+                }
+                onChange={(event) =>
+                  setSortOrder(
+                    event.target.value
+                  )
+                }
+              >
+                <option value="asc">
+                  Más antiguas primero
+                </option>
 
-            <option value="desc">
-              Más recientes primero
-            </option>
-          </select>
+                <option value="desc">
+                  Más recientes primero
+                </option>
+              </select>
 
-          <button
-            className="secondaryButton"
-            disabled={mediaLoading}
-            onClick={refreshMedia}
-          >
-            {mediaLoading
-              ? "Actualizando..."
-              : "Actualizar"}
-          </button>
+              <button
+                className="secondaryButton"
+                disabled={
+                  !mediaFiles.length
+                }
+                onClick={() => {
+                  setSelectionMode(
+                    true
+                  );
 
-          <button
-            className="primaryButton"
-            disabled={uploadingFiles}
-            onClick={() =>
-              mediaInput.current?.click()
-            }
-          >
-            {uploadingFiles
-              ? "Subiendo..."
-              : "+ Subir archivos"}
-          </button>
+                  setSelected([]);
+                }}
+              >
+                Seleccionar
+              </button>
+
+              <button
+                className="secondaryButton"
+                disabled={
+                  mediaLoading
+                }
+                onClick={
+                  refreshMedia
+                }
+              >
+                {mediaLoading
+                  ? "Actualizando..."
+                  : "Actualizar"}
+              </button>
+
+              <button
+                className="primaryButton"
+                disabled={
+                  uploadingFiles
+                }
+                onClick={() =>
+                  mediaInput
+                    .current
+                    ?.click()
+                }
+              >
+                {uploadingFiles
+                  ? "Subiendo..."
+                  : "+ Subir archivos"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="secondaryButton"
+                disabled={
+                  deletingMany
+                }
+                onClick={() => {
+                  if (
+                    allSelected
+                  ) {
+                    setSelected(
+                      []
+                    );
+                  } else {
+                    selectAll();
+                  }
+                }}
+              >
+                {allSelected
+                  ? "Quitar selección"
+                  : "Seleccionar todas"}
+              </button>
+
+              <button
+                className="secondaryButton"
+                disabled={
+                  deletingMany
+                }
+                onClick={
+                  clearSelection
+                }
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="deleteSelectedButton"
+                disabled={
+                  !selected.length ||
+                  deletingMany
+                }
+                onClick={
+                  removeSelected
+                }
+              >
+                {deletingMany
+                  ? "Eliminando..."
+                  : `Eliminar seleccionadas${
+                      selected.length
+                        ? ` (${selected.length})`
+                        : ""
+                    }`}
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {selectionMode && (
+        <div className="selectionBar">
+          <strong>
+            Tocá las fotos o archivos que querés borrar.
+          </strong>
+
+          <span>
+            {selected.length} seleccionados
+          </span>
+        </div>
+      )}
 
       <input
         ref={mediaInput}
@@ -3201,27 +4672,57 @@ function ArchivePage({
         <div className="mediaEmpty">
           Cargando archivo…
         </div>
-      ) : mediaFiles.length === 0 ? (
+      ) : mediaFiles.length ===
+        0 ? (
         <div className="mediaEmpty">
           Todavía no hay archivos visibles. Si acabás de subirlos, tocá “Actualizar”.
         </div>
       ) : (
         <div className="mediaGrid">
-          {sortedMedia.map((item) => (
-            <MediaCard
-              key={item.path}
-              item={item}
-              onDelete={() =>
-                deleteMedia(item)
-              }
-              onDateChange={(value) =>
-                updateMediaDate(
-                  item,
-                  value
-                )
-              }
-            />
-          ))}
+          {sortedMedia.map(
+            (item) => {
+              const key =
+                itemKey(item);
+
+              const isSelected =
+                selected.includes(
+                  key
+                );
+
+              return (
+                <MediaCard
+                  key={
+                    item.path
+                  }
+                  item={item}
+                  selectionMode={
+                    selectionMode
+                  }
+                  selected={
+                    isSelected
+                  }
+                  onSelect={() =>
+                    toggleSelected(
+                      item
+                    )
+                  }
+                  onDelete={() =>
+                    deleteMedia(
+                      item
+                    )
+                  }
+                  onDateChange={(
+                    value
+                  ) =>
+                    updateMediaDate(
+                      item,
+                      value
+                    )
+                  }
+                />
+              );
+            }
+          )}
         </div>
       )}
     </SimplePage>
@@ -3232,21 +4733,74 @@ function MediaCard({
   item,
   onDelete,
   onDateChange,
+  selectionMode = false,
+  selected = false,
+  onSelect,
 }) {
   const isImage =
-    item.mime?.startsWith("image/");
+    item.mime?.startsWith(
+      "image/"
+    );
 
   const isVideo =
-    item.mime?.startsWith("video/");
+    item.mime?.startsWith(
+      "video/"
+    );
 
   const isAudio =
-    item.mime?.startsWith("audio/");
+    item.mime?.startsWith(
+      "audio/"
+    );
 
   const isVisual =
-    isImage || isVideo;
+    isImage ||
+    isVideo;
 
   return (
-    <article className="mediaCard">
+    <article
+      className={`${
+        selected
+          ? "mediaCard mediaCardSelected"
+          : "mediaCard"
+      }${
+        selectionMode
+          ? " selectionMode"
+          : ""
+      }`}
+      onClick={() => {
+        if (
+          selectionMode
+        ) {
+          onSelect?.();
+        }
+      }}
+    >
+      {selectionMode && (
+        <button
+          type="button"
+          aria-label={
+            selected
+              ? "Quitar selección"
+              : "Seleccionar archivo"
+          }
+          className={
+            selected
+              ? "mediaSelectCircle selected"
+              : "mediaSelectCircle"
+          }
+          onClick={(
+            event
+          ) => {
+            event.stopPropagation();
+            onSelect?.();
+          }}
+        >
+          {selected
+            ? "✓"
+            : ""}
+        </button>
+      )}
+
       {isImage ? (
         <img
           className="mediaThumb"
@@ -3256,9 +4810,20 @@ function MediaCard({
       ) : isVideo ? (
         <video
           className="mediaVideo"
-          controls
+          controls={
+            !selectionMode
+          }
           preload="metadata"
           src={item.url}
+          onClick={(
+            event
+          ) => {
+            if (
+              !selectionMode
+            ) {
+              event.stopPropagation();
+            }
+          }}
         />
       ) : isAudio ? (
         <div className="mediaFilePlaceholder">
@@ -3272,13 +4837,21 @@ function MediaCard({
               🎙
             </div>
 
-            <audio
-              controls
-              src={item.url}
-              style={{
-                width: "100%",
-              }}
-            />
+            {!selectionMode && (
+              <audio
+                controls
+                src={item.url}
+                style={{
+                  width:
+                    "100%",
+                }}
+                onClick={(
+                  event
+                ) =>
+                  event.stopPropagation()
+                }
+              />
+            )}
           </div>
         </div>
       ) : (
@@ -3301,16 +4874,25 @@ function MediaCard({
       <div className="mediaMeta">
         <div
           className="mediaName"
-          title={item.name}
+          title={
+            item.name
+          }
         >
-          {cleanDisplayName(item.name)}
+          {cleanDisplayName(
+            item.name
+          )}
         </div>
 
         <div className="mediaType">
-          {item.folder} · {friendlyMime(item.mime)}
+          {item.folder}
+          {" · "}
+          {friendlyMime(
+            item.mime
+          )}
         </div>
 
-        {isVisual && (
+        {isVisual &&
+          !selectionMode && (
           <div className="mediaDateEditor">
             <label>
               Fecha de la foto
@@ -3318,8 +4900,13 @@ function MediaCard({
 
             <input
               type="date"
-              value={item.photo_date || ""}
-              onChange={(event) =>
+              value={
+                item.photo_date ||
+                ""
+              }
+              onChange={(
+                event
+              ) =>
                 onDateChange(
                   event.target.value
                 )
@@ -3328,28 +4915,34 @@ function MediaCard({
 
             <small>
               {item.photo_date
-                ? formatPhotoDate(item.photo_date)
+                ? formatPhotoDate(
+                    item.photo_date
+                  )
                 : "Sin fecha · queda al final de la cronología"}
             </small>
           </div>
         )}
       </div>
 
-      <div className="mediaActions">
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Abrir
-        </a>
+      {!selectionMode && (
+        <div className="mediaActions">
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Abrir
+          </a>
 
-        <button
-          onClick={onDelete}
-        >
-          Eliminar
-        </button>
-      </div>
+          <button
+            onClick={
+              onDelete
+            }
+          >
+            Eliminar
+          </button>
+        </div>
+      )}
     </article>
   );
 }
@@ -3370,7 +4963,9 @@ function PodcastPage({
       <EditableText
         tag="h1"
         className="pageTitle"
-        value={texts.podcastTitle}
+        value={
+          texts.podcastTitle
+        }
         onChange={(value) =>
           updateText(
             "podcastTitle",
@@ -3382,7 +4977,9 @@ function PodcastPage({
       <EditableText
         tag="p"
         className="pageSubtitle"
-        value={texts.podcastSubtitle}
+        value={
+          texts.podcastSubtitle
+        }
         onChange={(value) =>
           updateText(
             "podcastSubtitle",
@@ -3409,9 +5006,13 @@ function PodcastPage({
 
           <button
             className="secondaryButton"
-            disabled={uploadingFiles}
+            disabled={
+              uploadingFiles
+            }
             onClick={() =>
-              podcastInput.current?.click()
+              podcastInput
+                .current
+                ?.click()
             }
           >
             {uploadingFiles
@@ -3420,7 +5021,9 @@ function PodcastPage({
           </button>
 
           <input
-            ref={podcastInput}
+            ref={
+              podcastInput
+            }
             hidden
             type="file"
             accept="audio/*"
@@ -3463,7 +5066,9 @@ function DesignPage({
 
         <button
           className="secondaryButton"
-          onClick={restorePremium}
+          onClick={
+            restorePremium
+          }
         >
           Restaurar diseño PREMIUM
         </button>
@@ -3473,7 +5078,9 @@ function DesignPage({
         <DesignGroup title="Fondo general">
           <ColorField
             label="Color de fondo"
-            value={design.background}
+            value={
+              design.background
+            }
             onChange={(value) =>
               updateDesign(
                 "background",
@@ -3490,7 +5097,9 @@ function DesignPage({
             <button
               className="secondaryButton"
               onClick={() =>
-                backgroundInput.current?.click()
+                backgroundInput
+                  .current
+                  ?.click()
               }
             >
               Subir imagen
@@ -3511,17 +5120,23 @@ function DesignPage({
             )}
 
             <input
-              ref={backgroundInput}
+              ref={
+                backgroundInput
+              }
               hidden
               type="file"
               accept="image/*"
-              onChange={uploadBackground}
+              onChange={
+                uploadBackground
+              }
             />
           </div>
 
           <RangeField
             label="Visibilidad de la imagen"
-            value={design.backgroundOpacity}
+            value={
+              design.backgroundOpacity
+            }
             min={0}
             max={100}
             suffix="%"
@@ -3535,7 +5150,9 @@ function DesignPage({
 
           <RangeField
             label="Desenfoque del fondo"
-            value={design.backgroundBlur}
+            value={
+              design.backgroundBlur
+            }
             min={0}
             max={20}
             suffix=" px"
@@ -3551,7 +5168,9 @@ function DesignPage({
         <DesignGroup title="Paleta de colores">
           <ColorField
             label="Color principal"
-            value={design.accent}
+            value={
+              design.accent
+            }
             onChange={(value) =>
               updateDesign(
                 "accent",
@@ -3562,7 +5181,9 @@ function DesignPage({
 
           <ColorField
             label="Texto principal"
-            value={design.text}
+            value={
+              design.text
+            }
             onChange={(value) =>
               updateDesign(
                 "text",
@@ -3573,7 +5194,9 @@ function DesignPage({
 
           <ColorField
             label="Texto secundario"
-            value={design.secondary}
+            value={
+              design.secondary
+            }
             onChange={(value) =>
               updateDesign(
                 "secondary",
@@ -3584,7 +5207,9 @@ function DesignPage({
 
           <ColorField
             label="Tarjetas"
-            value={design.card}
+            value={
+              design.card
+            }
             onChange={(value) =>
               updateDesign(
                 "card",
@@ -3595,7 +5220,9 @@ function DesignPage({
 
           <ColorField
             label="Menú lateral"
-            value={design.sidebar}
+            value={
+              design.sidebar
+            }
             onChange={(value) =>
               updateDesign(
                 "sidebar",
@@ -3606,7 +5233,9 @@ function DesignPage({
 
           <ColorField
             label="Bordes"
-            value={design.border}
+            value={
+              design.border
+            }
             onChange={(value) =>
               updateDesign(
                 "border",
@@ -3619,7 +5248,9 @@ function DesignPage({
         <DesignGroup title="Tarjetas y paneles">
           <RangeField
             label="Transparencia"
-            value={design.cardOpacity}
+            value={
+              design.cardOpacity
+            }
             min={20}
             max={100}
             suffix="%"
@@ -3633,7 +5264,9 @@ function DesignPage({
 
           <RangeField
             label="Redondeo de tarjetas"
-            value={design.radius}
+            value={
+              design.radius
+            }
             min={0}
             max={40}
             suffix=" px"
@@ -3647,7 +5280,9 @@ function DesignPage({
 
           <RangeField
             label="Redondeo de botones"
-            value={design.buttonRadius}
+            value={
+              design.buttonRadius
+            }
             min={0}
             max={30}
             suffix=" px"
@@ -3663,7 +5298,9 @@ function DesignPage({
         <DesignGroup title="Estructura">
           <RangeField
             label="Ancho del menú lateral"
-            value={design.sidebarWidth}
+            value={
+              design.sidebarWidth
+            }
             min={200}
             max={360}
             suffix=" px"
@@ -3677,7 +5314,9 @@ function DesignPage({
 
           <RangeField
             label="Ancho máximo del contenido"
-            value={design.contentWidth}
+            value={
+              design.contentWidth
+            }
             min={800}
             max={1600}
             suffix=" px"
@@ -3693,7 +5332,9 @@ function DesignPage({
         <DesignGroup title="Tipografía">
           <SelectField
             label="Fuente de títulos"
-            value={design.titleFont}
+            value={
+              design.titleFont
+            }
             options={[
               "Georgia",
               "Arial",
@@ -3709,7 +5350,9 @@ function DesignPage({
 
           <SelectField
             label="Fuente general"
-            value={design.bodyFont}
+            value={
+              design.bodyFont
+            }
             options={[
               "Arial",
               "Georgia",
@@ -3776,8 +5419,7 @@ function DesignPage({
                 lineHeight: 1.6,
               }}
             >
-              Esta vista te permite ver en tiempo real cómo quedan los colores,
-              la transparencia, los bordes, las tipografías y el estilo general.
+              Esta vista te permite ver en tiempo real cómo quedan los colores, la transparencia, los bordes, las tipografías y el estilo general.
             </p>
 
             <button
@@ -3812,26 +5454,34 @@ function EditableText({
   className = "",
 }) {
   const Tag = tag;
-  const ref = useRef(null);
+
+  const ref =
+    useRef(null);
 
   useEffect(() => {
     if (
       ref.current &&
-      ref.current.innerText !== value
+      ref.current.innerText !==
+        value
     ) {
-      ref.current.innerText = value;
+      ref.current.innerText =
+        value;
     }
   }, [value]);
 
   return (
     <Tag
       ref={ref}
-      className={`${className} editableText`}
+      className={
+        `${className} editableText`
+      }
       contentEditable
       suppressContentEditableWarning
       onBlur={(event) =>
         onChange(
-          event.currentTarget.innerText
+          event
+            .currentTarget
+            .innerText
         )
       }
     />
@@ -3871,8 +5521,13 @@ function ArchiveCard({
 }) {
   return (
     <div className="archiveCard">
-      <span>{title}</span>
-      <strong>{number}</strong>
+      <span>
+        {title}
+      </span>
+
+      <strong>
+        {number}
+      </strong>
     </div>
   );
 }
@@ -3883,7 +5538,10 @@ function DesignGroup({
 }) {
   return (
     <div className="designGroup">
-      <h3>{title}</h3>
+      <h3>
+        {title}
+      </h3>
+
       {children}
     </div>
   );
@@ -3896,7 +5554,9 @@ function ColorField({
 }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label>
+        {label}
+      </label>
 
       <div className="colorField">
         <input
@@ -3909,7 +5569,9 @@ function ColorField({
           }
         />
 
-        <span>{value}</span>
+        <span>
+          {value}
+        </span>
       </div>
     </div>
   );
@@ -3926,7 +5588,9 @@ function RangeField({
   return (
     <div className="field">
       <div className="fieldTop">
-        <label>{label}</label>
+        <label>
+          {label}
+        </label>
 
         <span>
           {value}
@@ -3959,7 +5623,9 @@ function SelectField({
 }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label>
+        {label}
+      </label>
 
       <select
         value={value}
@@ -3994,23 +5660,40 @@ function guessMimeFromName(
       ?.toLowerCase();
 
   const map = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-    gif: "image/gif",
-    heic: "image/heic",
-    heif: "image/heif",
-    mov: "video/quicktime",
-    mp4: "video/mp4",
-    m4v: "video/x-m4v",
-    webm: "video/webm",
-    mp3: "audio/mpeg",
-    m4a: "audio/mp4",
-    wav: "audio/wav",
-    pdf: "application/pdf",
-    doc: "application/msword",
-    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    jpg:
+      "image/jpeg",
+    jpeg:
+      "image/jpeg",
+    png:
+      "image/png",
+    webp:
+      "image/webp",
+    gif:
+      "image/gif",
+    heic:
+      "image/heic",
+    heif:
+      "image/heif",
+    mov:
+      "video/quicktime",
+    mp4:
+      "video/mp4",
+    m4v:
+      "video/x-m4v",
+    webm:
+      "video/webm",
+    mp3:
+      "audio/mpeg",
+    m4a:
+      "audio/mp4",
+    wav:
+      "audio/wav",
+    pdf:
+      "application/pdf",
+    doc:
+      "application/msword",
+    docx:
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   };
 
   return (
@@ -4066,14 +5749,21 @@ function cleanDisplayName(
 }
 
 function formatPhotoDate(value) {
-  if (!value) return "";
+  if (!value) {
+    return "";
+  }
 
   try {
-    return new Date(`${value}T00:00:00`).toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
+    return new Date(
+      `${value}T00:00:00`
+    ).toLocaleDateString(
+      "es-AR",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }
+    );
   } catch {
     return value;
   }
@@ -4085,7 +5775,9 @@ function countWords(value) {
       value || ""
     ).trim();
 
-  if (!text) return 0;
+  if (!text) {
+    return 0;
+  }
 
   return text
     .split(/\s+/)
@@ -4118,7 +5810,9 @@ function formatTimer(
 }
 
 function formatDate(value) {
-  if (!value) return "";
+  if (!value) {
+    return "";
+  }
 
   try {
     return new Date(
