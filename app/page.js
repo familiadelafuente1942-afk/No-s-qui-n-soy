@@ -4,15 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getSupabase } from "../lib/supabase";
 
-const MENU = [
-  "Inicio",
-  "Mi Historia",
-  "El Libro",
-  "Personas",
-  "Archivo",
-  "Podcast",
-  "Diseño",
-];
+const MENU = ["Inicio", "Mi Historia", "El Libro", "Personas", "Archivo", "Podcast", "Diseño"];
 
 const DEFAULT_DESIGN = {
   background: "#0b0b0b",
@@ -40,92 +32,36 @@ const DEFAULT_TEXTS = {
   homeSubtitle:
     "Contá la historia como la recordás. La aplicación conserva cada recuerdo original y te ayuda a transformarlo en un libro.",
   historyTitle: "Contá la historia",
-  historySubtitle:
-    "Podés escribir un recuerdo o contarlo con tu propia voz.",
+  historySubtitle: "Podés escribir un recuerdo o contarlo con tu propia voz.",
   bookTitle: "El Libro",
-  bookSubtitle:
-    "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
+  bookSubtitle: "Acá se construye la versión narrativa de la historia, capítulo por capítulo.",
   podcastTitle: "Podcast",
-  podcastSubtitle:
-    "Convertí historias, capítulos y recuerdos en episodios de audio.",
+  podcastSubtitle: "Convertí historias, capítulos y recuerdos en episodios de audio.",
 };
 
 export default function Home() {
-  const supabase = useMemo(
-    () => getSupabase(),
-    []
-  );
-
+  const supabase = useMemo(() => getSupabase(), []);
   const mediaInput = useRef(null);
   const backgroundInput = useRef(null);
   const podcastInput = useRef(null);
 
-  const [active, setActive] =
-    useState("Inicio");
-
-  const [project, setProject] =
-    useState(null);
-
-  const [stories, setStories] =
-    useState([]);
-
-  const [chapters, setChapters] =
-    useState([]);
-
-  const [mediaFiles, setMediaFiles] =
-    useState([]);
-
-  const [design, setDesign] =
-    useState(DEFAULT_DESIGN);
-
-  const [texts, setTexts] =
-    useState(DEFAULT_TEXTS);
-
-  const [notice, setNotice] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [
-    mediaLoading,
-    setMediaLoading,
-  ] = useState(false);
-
-  const [
-    uploadingFiles,
-    setUploadingFiles,
-  ] = useState(false);
-
-  const [
-    editorLoading,
-    setEditorLoading,
-  ] = useState(false);
-
-  const [
-    editorProposal,
-    setEditorProposal,
-  ] = useState(null);
-
-  const [
-    editorError,
-    setEditorError,
-  ] = useState("");
-
-  const [
-    lastMemory,
-    setLastMemory,
-  ] = useState("");
-
-  const [
-    recorderOpen,
-    setRecorderOpen,
-  ] = useState(false);
-
-  const [
-    draftSeed,
-    setDraftSeed,
-  ] = useState(null);
+  const [active, setActive] = useState("Inicio");
+  const [project, setProject] = useState(null);
+  const [stories, setStories] = useState([]);
+  const [chapters, setChapters] = useState([]);
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [design, setDesign] = useState(DEFAULT_DESIGN);
+  const [texts, setTexts] = useState(DEFAULT_TEXTS);
+  const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [editorLoading, setEditorLoading] = useState(false);
+  const [editorProposal, setEditorProposal] = useState(null);
+  const [editorError, setEditorError] = useState("");
+  const [lastMemory, setLastMemory] = useState("");
+  const [recorderOpen, setRecorderOpen] = useState(false);
+  const [draftSeed, setDraftSeed] = useState(null);
 
   useEffect(() => {
     loadLocalPreferences();
@@ -134,50 +70,27 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        "nqs_design",
-        JSON.stringify(design)
-      );
+      localStorage.setItem("nqs_design", JSON.stringify(design));
     } catch {}
   }, [design]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        "nqs_texts",
-        JSON.stringify(texts)
-      );
+      localStorage.setItem("nqs_texts", JSON.stringify(texts));
     } catch {}
   }, [texts]);
 
   function loadLocalPreferences() {
     try {
-      const savedDesign =
-        localStorage.getItem(
-          "nqs_design"
-        );
-
-      const savedTexts =
-        localStorage.getItem(
-          "nqs_texts"
-        );
+      const savedDesign = localStorage.getItem("nqs_design");
+      const savedTexts = localStorage.getItem("nqs_texts");
 
       if (savedDesign) {
-        setDesign({
-          ...DEFAULT_DESIGN,
-          ...JSON.parse(
-            savedDesign
-          ),
-        });
+        setDesign({ ...DEFAULT_DESIGN, ...JSON.parse(savedDesign) });
       }
 
       if (savedTexts) {
-        setTexts({
-          ...DEFAULT_TEXTS,
-          ...JSON.parse(
-            savedTexts
-          ),
-        });
+        setTexts({ ...DEFAULT_TEXTS, ...JSON.parse(savedTexts) });
       }
     } catch {}
   }
@@ -186,306 +99,187 @@ export default function Home() {
     setLoading(true);
 
     try {
-      let {
-        data: foundProject,
-        error,
-      } = await supabase
+      let { data: foundProject, error } = await supabase
         .from("projects")
         .select("*")
-        .eq(
-          "title",
-          "NO SE QUIEN SOY"
-        )
+        .eq("title", "NO SE QUIEN SOY")
         .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error(error);
-      }
+      if (error) console.error(error);
 
       if (!foundProject) {
-        const created =
-          await supabase
-            .from("projects")
-            .insert({
-              title:
-                "NO SE QUIEN SOY",
-            })
-            .select()
-            .single();
+        const created = await supabase
+          .from("projects")
+          .insert({ title: "NO SE QUIEN SOY" })
+          .select()
+          .single();
 
-        if (created.error) {
-          throw created.error;
-        }
-
-        foundProject =
-          created.data;
+        if (created.error) throw created.error;
+        foundProject = created.data;
       }
 
-      setProject(
-        foundProject
-      );
+      setProject(foundProject);
 
-      if (
-        foundProject?.id
-      ) {
+      if (foundProject?.id) {
         await Promise.all([
-          loadStories(
-            foundProject.id
-          ),
-
-          loadChapters(
-            foundProject.id
-          ),
-
-          loadMedia(
-            foundProject.id
-          ),
+          loadStories(foundProject.id),
+          loadChapters(foundProject.id),
+          loadMedia(foundProject.id),
         ]);
       }
     } catch (error) {
-      flash(
-        "No se pudo conectar con Supabase: " +
-          error.message
-      );
+      flash("No se pudo conectar con Supabase: " + error.message);
     }
 
     setLoading(false);
   }
 
-  async function loadStories(
-    projectId
-  ) {
-    const {
-      data,
-      error,
-    } = await supabase
+  async function loadStories(projectId) {
+    const { data, error } = await supabase
       .from("stories")
       .select("*")
-      .eq(
-        "project_id",
-        projectId
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        }
-      );
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error(
-        error
-      );
-
+      console.error(error);
       return [];
     }
 
-    const result =
-      data || [];
-
-    setStories(
-      result
-    );
-
+    const result = data || [];
+    setStories(result);
     return result;
   }
 
-  async function loadChapters(
-    projectId
-  ) {
-    const {
-      data,
-      error,
-    } = await supabase
+  async function loadChapters(projectId) {
+    const { data, error } = await supabase
       .from("chapters")
       .select("*")
-      .eq(
-        "project_id",
-        projectId
-      )
-      .order(
-        "created_at",
-        {
-          ascending: true,
-        }
-      );
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true });
 
     if (error) {
-      console.error(
-        error
-      );
-
+      console.error(error);
       return [];
     }
 
-    const result =
-      data || [];
-
-    setChapters(
-      result
-    );
-
+    const result = data || [];
+    setChapters(result);
     return result;
   }
 
-  async function loadMedia(
-    projectId
-  ) {
-    if (!projectId) {
-      return [];
-    }
+  async function loadMedia(projectId) {
+    if (!projectId) return [];
 
-    setMediaLoading(
-      true
-    );
+    setMediaLoading(true);
 
     try {
-      const folders = [
-        "archivo",
-        "audio",
-        "podcast",
-      ];
+      let { data: mediaRows, error: mediaError } = await supabase
+        .from("media")
+        .select("*")
+        .eq("project_id", projectId);
 
-      const collected =
-        [];
+      if (mediaError) {
+        throw new Error(
+          "No se pudo leer la tabla media: " + mediaError.message
+        );
+      }
 
-      for (
-        const folder of
-        folders
-      ) {
-        const basePath =
-          `${projectId}/${folder}`;
+      const folders = ["archivo", "audio", "podcast"];
+      const knownPaths = new Set((mediaRows || []).map((row) => row.storage_path));
+      const missingRows = [];
 
-        const {
-          data,
-          error,
-        } =
-          await supabase.storage
-            .from(
-              "memorias"
-            )
-            .list(
-              basePath,
-              {
-                limit: 1000,
+      for (const folder of folders) {
+        const basePath = `${projectId}/${folder}`;
 
-                sortBy: {
-                  column:
-                    "created_at",
+        const { data: storageItems, error: storageError } = await supabase.storage
+          .from("memorias")
+          .list(basePath, {
+            limit: 1000,
+            sortBy: { column: "created_at", order: "desc" },
+          });
 
-                  order:
-                    "desc",
-                },
-              }
-            );
-
-        if (error) {
-          console.error(
-            `Error leyendo ${folder}:`,
-            error
-          );
-
+        if (storageError) {
+          console.error(`Error leyendo ${folder}:`, storageError);
           continue;
         }
 
-        for (
-          const item of
-          data || []
-        ) {
-          if (
-            !item?.name ||
-            !item?.id
-          ) {
-            continue;
-          }
+        for (const item of storageItems || []) {
+          if (!item?.name || !item?.id) continue;
 
-          const path =
-            `${basePath}/${item.name}`;
-
-          const signed =
-            await supabase.storage
-              .from(
-                "memorias"
-              )
-              .createSignedUrl(
-                path,
-                60 * 60
-              );
-
-          if (
-            signed.error
-          ) {
-            console.error(
-              "No se pudo crear URL:",
-              signed.error
-            );
-
-            continue;
-          }
+          const storagePath = `${basePath}/${item.name}`;
+          if (knownPaths.has(storagePath)) continue;
 
           const mime =
-            item?.metadata
-              ?.mimetype ||
-            item?.metadata
-              ?.contentType ||
-            guessMimeFromName(
-              item.name
-            );
+            item?.metadata?.mimetype ||
+            item?.metadata?.contentType ||
+            guessMimeFromName(item.name);
 
-          collected.push({
-            ...item,
-
-            path,
-
-            folder,
-
-            url:
-              signed.data
-                ?.signedUrl ||
-              "",
-
-            mime,
+          missingRows.push({
+            project_id: projectId,
+            storage_path: storagePath,
+            file_name: item.name,
+            file_type: mime,
+            photo_date: null,
           });
+
+          knownPaths.add(storagePath);
         }
       }
 
-      collected.sort(
-        (a, b) => {
-          const da =
-            new Date(
-              a.created_at ||
-                a.updated_at ||
-                0
-            ).getTime();
+      if (missingRows.length > 0) {
+        const { error: backfillError } = await supabase
+          .from("media")
+          .insert(missingRows);
 
-          const db =
-            new Date(
-              b.created_at ||
-                b.updated_at ||
-                0
-            ).getTime();
+        if (backfillError) {
+          console.error("No se pudieron registrar archivos antiguos:", backfillError);
+        } else {
+          const refreshed = await supabase
+            .from("media")
+            .select("*")
+            .eq("project_id", projectId);
 
-          return db - da;
+          if (!refreshed.error) {
+            mediaRows = refreshed.data || [];
+          }
         }
-      );
+      }
 
-      setMediaFiles(
-        collected
-      );
+      const collected = [];
 
+      for (const row of mediaRows || []) {
+        const signed = await supabase.storage
+          .from("memorias")
+          .createSignedUrl(row.storage_path, 60 * 60);
+
+        if (signed.error) {
+          console.error("No se pudo crear URL:", signed.error);
+          continue;
+        }
+
+        const folder = row.storage_path?.split("/")?.[1] || "archivo";
+        const mime = row.file_type || guessMimeFromName(row.file_name);
+
+        collected.push({
+          ...row,
+          path: row.storage_path,
+          name: row.file_name,
+          folder,
+          mime,
+          url: signed.data?.signedUrl || "",
+        });
+      }
+
+      setMediaFiles(collected);
       return collected;
     } catch (error) {
-      console.error(
-        "Error cargando archivos:",
-        error
-      );
-
+      console.error("Error cargando archivos:", error);
+      flash(error?.message || "No se pudo cargar el archivo fotográfico.");
       return [];
     } finally {
-      setMediaLoading(
-        false
-      );
+      setMediaLoading(false);
     }
   }
 
@@ -494,1134 +288,548 @@ export default function Home() {
     currentStories = stories,
     currentChapters = chapters
   ) {
-    if (
-      !memoryText?.trim()
-    ) {
-      return;
-    }
+    if (!memoryText?.trim()) return;
 
-    setEditorLoading(
-      true
-    );
-
-    setEditorError(
-      ""
-    );
-
-    setEditorProposal(
-      null
-    );
+    setEditorLoading(true);
+    setEditorError("");
+    setEditorProposal(null);
 
     try {
-      const response =
-        await fetch(
-          "/api/editor",
-          {
-            method:
-              "POST",
+      const response = await fetch("/api/editor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "memory",
+          memory: memoryText,
+          memories: currentStories || [],
+          chapters: currentChapters || [],
+        }),
+      });
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
+      const data = await response.json();
 
-            body:
-              JSON.stringify({
-                mode:
-                  "memory",
-
-                memory:
-                  memoryText,
-
-                memories:
-                  currentStories ||
-                  [],
-
-                chapters:
-                  currentChapters ||
-                  [],
-              }),
-          }
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok
-      ) {
-        throw new Error(
-          data?.error ||
-            "Claude no pudo analizar el recuerdo."
-        );
+      if (!response.ok) {
+        throw new Error(data?.error || "Claude no pudo analizar el recuerdo.");
       }
 
-      setEditorProposal(
-        data.result
-      );
-
-      flash(
-        "La IA Editora terminó de analizar el recuerdo."
-      );
+      setEditorProposal(data.result);
+      flash("La IA Editora terminó de analizar el recuerdo.");
     } catch (error) {
       setEditorError(
-        error?.message ||
-          "No se pudo conectar con la IA Editora."
+        error?.message || "No se pudo conectar con la IA Editora."
       );
     } finally {
-      setEditorLoading(
-        false
-      );
+      setEditorLoading(false);
     }
   }
 
-  async function saveStory({
-    title,
-    text,
-  }) {
-    if (
-      !text.trim()
-    ) {
-      flash(
-        "Escribí el recuerdo antes de guardarlo."
-      );
-
+  async function saveStory({ title, text }) {
+    if (!text.trim()) {
+      flash("Escribí el recuerdo antes de guardarlo.");
       return false;
     }
 
-    if (
-      !project?.id
-    ) {
-      flash(
-        "El proyecto todavía no está listo."
-      );
-
+    if (!project?.id) {
+      flash("El proyecto todavía no está listo.");
       return false;
     }
 
-    setLoading(
-      true
-    );
-
-    setEditorError(
-      ""
-    );
-
-    setEditorProposal(
-      null
-    );
+    setLoading(true);
+    setEditorError("");
+    setEditorProposal(null);
 
     try {
-      const memoryText =
-        text.trim();
+      const memoryText = text.trim();
 
-      const {
-        data:
-          savedStory,
+      const { data: savedStory, error } = await supabase
+        .from("stories")
+        .insert({
+          project_id: project.id,
+          title: title.trim() || "Recuerdo sin título",
+          original_text: memoryText,
+          source_type: "written",
+        })
+        .select()
+        .single();
 
-        error,
-      } =
-        await supabase
-          .from(
-            "stories"
-          )
-          .insert({
-            project_id:
-              project.id,
+      if (error) throw error;
 
-            title:
-              title.trim() ||
-              "Recuerdo sin título",
+      const refreshedStories = await loadStories(project.id);
+      const refreshedChapters = await loadChapters(project.id);
 
-            original_text:
-              memoryText,
+      setLastMemory(memoryText);
+      setLoading(false);
 
-            source_type:
-              "written",
-          })
-          .select()
-          .single();
-
-      if (error) {
-        throw error;
-      }
-
-      const refreshedStories =
-        await loadStories(
-          project.id
-        );
-
-      const refreshedChapters =
-        await loadChapters(
-          project.id
-        );
-
-      setLastMemory(
-        memoryText
-      );
-
-      setLoading(
-        false
-      );
-
-      flash(
-        "Recuerdo guardado. La IA Editora lo está analizando."
-      );
+      flash("Recuerdo guardado. La IA Editora lo está analizando.");
 
       await analyzeWithEditor(
         memoryText,
-
-        refreshedStories ||
-          [
-            savedStory,
-            ...stories,
-          ],
-
-        refreshedChapters ||
-          chapters
+        refreshedStories || [savedStory, ...stories],
+        refreshedChapters || chapters
       );
 
       return true;
     } catch (error) {
-      setLoading(
-        false
-      );
-
-      flash(
-        "No se pudo guardar: " +
-          error.message
-      );
-
+      setLoading(false);
+      flash("No se pudo guardar: " + error.message);
       return false;
     }
   }
 
-  async function deleteStory(
-    id
-  ) {
-    const ok =
-      window.confirm(
-        "¿Eliminar este recuerdo?"
-      );
+  async function deleteStory(id) {
+    const ok = window.confirm("¿Eliminar este recuerdo?");
+    if (!ok) return;
 
-    if (!ok) {
-      return;
-    }
-
-    const {
-      error,
-    } =
-      await supabase
-        .from(
-          "stories"
-        )
-        .delete()
-        .eq(
-          "id",
-          id
-        );
+    const { error } = await supabase.from("stories").delete().eq("id", id);
 
     if (error) {
-      flash(
-        error.message
-      );
-
+      flash(error.message);
       return;
     }
 
-    await loadStories(
-      project.id
-    );
-
-    flash(
-      "Recuerdo eliminado."
-    );
+    await loadStories(project.id);
+    flash("Recuerdo eliminado.");
   }
 
-  function updateEditorText(
-    value
-  ) {
-    setEditorProposal(
-      (
-        previous
-      ) => ({
-        ...previous,
-
-        proposed_text:
-          value,
-      })
-    );
+  function updateEditorText(value) {
+    setEditorProposal((previous) => ({
+      ...previous,
+      proposed_text: value,
+    }));
   }
 
   function discardEditorProposal() {
-    setEditorProposal(
-      null
-    );
-
-    setEditorError(
-      ""
-    );
-
-    setLastMemory(
-      ""
-    );
+    setEditorProposal(null);
+    setEditorError("");
+    setLastMemory("");
   }
 
   async function retryEditor() {
-    if (
-      !lastMemory
-    ) {
-      flash(
-        "No hay un recuerdo para volver a analizar."
-      );
-
+    if (!lastMemory) {
+      flash("No hay un recuerdo para volver a analizar.");
       return;
     }
 
-    await analyzeWithEditor(
-      lastMemory,
-      stories,
-      chapters
-    );
+    await analyzeWithEditor(lastMemory, stories, chapters);
   }
 
-  async function insertChapter(
-    row
-  ) {
-    let result =
-      await supabase
-        .from(
-          "chapters"
-        )
-        .insert(
-          row
-        );
+  async function insertChapter(row) {
+    let result = await supabase.from("chapters").insert(row);
 
     if (
       result.error &&
-      Object.prototype.hasOwnProperty.call(
-        row,
-        "chapter_number"
-      )
+      Object.prototype.hasOwnProperty.call(row, "chapter_number")
     ) {
-      const {
-        chapter_number,
-        ...fallback
-      } = row;
-
-      result =
-        await supabase
-          .from(
-            "chapters"
-          )
-          .insert(
-            fallback
-          );
+      const { chapter_number, ...fallback } = row;
+      result = await supabase.from("chapters").insert(fallback);
     }
 
     return result;
   }
 
   async function acceptEditorProposal() {
-    if (
-      !editorProposal ||
-      !project?.id
-    ) {
+    if (!editorProposal || !project?.id) return;
+
+    const proposedText = editorProposal.proposed_text?.trim();
+
+    if (!proposedText) {
+      flash("La propuesta no tiene texto.");
       return;
     }
 
-    const proposedText =
-      editorProposal
-        .proposed_text
-        ?.trim();
-
-    if (
-      !proposedText
-    ) {
-      flash(
-        "La propuesta no tiene texto."
-      );
-
-      return;
-    }
-
-    setLoading(
-      true
-    );
+    setLoading(true);
 
     try {
-      let targetChapter =
-        null;
+      let targetChapter = null;
 
-      if (
-        editorProposal
-          .chapter_id
-      ) {
+      if (editorProposal.chapter_id) {
         targetChapter =
           chapters.find(
-            (
-              chapter
-            ) =>
-              String(
-                chapter.id
-              ) ===
-              String(
-                editorProposal
-                  .chapter_id
-              )
+            (chapter) =>
+              String(chapter.id) === String(editorProposal.chapter_id)
           ) || null;
       }
 
       if (
         !targetChapter &&
-        editorProposal
-          .recommended_action ===
-          "existing_chapter" &&
-        editorProposal
-          .chapter_title
+        editorProposal.recommended_action === "existing_chapter" &&
+        editorProposal.chapter_title
       ) {
         targetChapter =
           chapters.find(
-            (
-              chapter
-            ) =>
-              normalizeText(
-                chapter.title
-              ) ===
-              normalizeText(
-                editorProposal
-                  .chapter_title
-              )
+            (chapter) =>
+              normalizeText(chapter.title) ===
+              normalizeText(editorProposal.chapter_title)
           ) || null;
       }
 
-      if (
-        targetChapter
-      ) {
-        const updatedContent =
-          targetChapter.content
-            ? `${targetChapter.content}\n\n${proposedText}`
-            : proposedText;
+      if (targetChapter) {
+        const updatedContent = targetChapter.content
+          ? `${targetChapter.content}\n\n${proposedText}`
+          : proposedText;
 
-        const {
-          error,
-        } =
-          await supabase
-            .from(
-              "chapters"
-            )
-            .update({
-              content:
-                updatedContent,
-            })
-            .eq(
-              "id",
-              targetChapter.id
-            );
+        const { error } = await supabase
+          .from("chapters")
+          .update({ content: updatedContent })
+          .eq("id", targetChapter.id);
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
       } else {
-        const nextNumber =
-          chapters.length +
-          1;
+        const nextNumber = chapters.length + 1;
 
-        const result =
-          await insertChapter({
-            project_id:
-              project.id,
+        const result = await insertChapter({
+          project_id: project.id,
+          chapter_number: nextNumber,
+          title: editorProposal.chapter_title || `Capítulo ${nextNumber}`,
+          content: proposedText,
+        });
 
-            chapter_number:
-              nextNumber,
-
-            title:
-              editorProposal
-                .chapter_title ||
-              `Capítulo ${nextNumber}`,
-
-            content:
-              proposedText,
-          });
-
-        if (
-          result.error
-        ) {
-          throw result.error;
-        }
+        if (result.error) throw result.error;
       }
 
-      await loadChapters(
-        project.id
-      );
-
+      await loadChapters(project.id);
       discardEditorProposal();
-
-      flash(
-        "La propuesta fue incorporada al libro."
-      );
-
-      setActive(
-        "El Libro"
-      );
+      flash("La propuesta fue incorporada al libro.");
+      setActive("El Libro");
     } catch (error) {
-      flash(
-        "No se pudo incorporar al libro: " +
-          error.message
-      );
+      flash("No se pudo incorporar al libro: " + error.message);
     } finally {
-      setLoading(
-        false
-      );
+      setLoading(false);
     }
   }
 
   async function createChapter() {
-    if (
-      !project?.id
-    ) {
+    if (!project?.id) return;
+
+    const number = chapters.length + 1;
+
+    const result = await insertChapter({
+      project_id: project.id,
+      chapter_number: number,
+      title: `Capítulo ${number}`,
+      content: "",
+    });
+
+    if (result.error) {
+      flash("No se pudo crear el capítulo: " + result.error.message);
       return;
     }
 
-    const number =
-      chapters.length +
-      1;
-
-    const result =
-      await insertChapter({
-        project_id:
-          project.id,
-
-        chapter_number:
-          number,
-
-        title:
-          `Capítulo ${number}`,
-
-        content: "",
-      });
-
-    if (
-      result.error
-    ) {
-      flash(
-        "No se pudo crear el capítulo: " +
-          result.error.message
-      );
-
-      return;
-    }
-
-    await loadChapters(
-      project.id
-    );
-
-    flash(
-      "Capítulo creado."
-    );
+    await loadChapters(project.id);
+    flash("Capítulo creado.");
   }
 
-  async function updateChapter(
-    id,
-    field,
-    value
-  ) {
-    setChapters(
-      (
-        previous
-      ) =>
-        previous.map(
-          (
-            chapter
-          ) =>
-            chapter.id ===
-            id
-              ? {
-                  ...chapter,
-
-                  [field]:
-                    value,
-                }
-              : chapter
-        )
+  async function updateChapter(id, field, value) {
+    setChapters((previous) =>
+      previous.map((chapter) =>
+        chapter.id === id ? { ...chapter, [field]: value } : chapter
+      )
     );
 
-    const {
-      error,
-    } =
-      await supabase
-        .from(
-          "chapters"
-        )
-        .update({
-          [field]:
-            value,
-        })
-        .eq(
-          "id",
-          id
-        );
+    const { error } = await supabase
+      .from("chapters")
+      .update({ [field]: value })
+      .eq("id", id);
 
     if (error) {
-      flash(
-        "No se pudo actualizar el capítulo."
-      );
+      flash("No se pudo actualizar el capítulo.");
     }
   }
 
-  async function deleteChapter(
-    id
-  ) {
-    const ok =
-      window.confirm(
-        "¿Eliminar este capítulo?"
-      );
+  async function deleteChapter(id) {
+    const ok = window.confirm("¿Eliminar este capítulo?");
+    if (!ok) return;
 
-    if (!ok) {
-      return;
-    }
-
-    const {
-      error,
-    } =
-      await supabase
-        .from(
-          "chapters"
-        )
-        .delete()
-        .eq(
-          "id",
-          id
-        );
+    const { error } = await supabase.from("chapters").delete().eq("id", id);
 
     if (error) {
-      flash(
-        error.message
-      );
-
+      flash(error.message);
       return;
     }
 
-    await loadChapters(
-      project.id
-    );
-
-    flash(
-      "Capítulo eliminado."
-    );
+    await loadChapters(project.id);
+    flash("Capítulo eliminado.");
   }
 
-  async function uploadFiles(
-    files,
-    type = "archivo"
-  ) {
-    if (
-      !files?.length
-    ) {
-      return {
-        uploaded: 0,
-        failed: 0,
-      };
+  async function uploadFiles(files, type = "archivo") {
+    if (!files?.length) return { uploaded: 0, failed: 0 };
+
+    if (!project?.id) {
+      flash("El proyecto todavía no terminó de cargar.");
+      return { uploaded: 0, failed: files.length };
     }
 
-    if (
-      !project?.id
-    ) {
-      flash(
-        "El proyecto todavía no terminó de cargar."
-      );
-
-      return {
-        uploaded: 0,
-
-        failed:
-          files.length,
-      };
-    }
-
-    setUploadingFiles(
-      true
-    );
+    setUploadingFiles(true);
 
     let uploaded = 0;
     let failed = 0;
-
     const errors = [];
 
-    for (
-      let index = 0;
-      index <
-      files.length;
-      index++
-    ) {
-      const file =
-        files[index];
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
 
       try {
-        if (
-          !file?.name
-        ) {
-          throw new Error(
-            "Archivo inválido."
-          );
+        if (!file?.name) throw new Error("Archivo inválido.");
+
+        const cleanName = file.name
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+        const uniqueId = `${Date.now()}-${index}-${Math.random()
+          .toString(36)
+          .slice(2, 10)}`;
+
+        const path = `${project.id}/${type}/${uniqueId}-${cleanName}`;
+
+        const { error: storageError } = await supabase.storage
+          .from("memorias")
+          .upload(path, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type || undefined,
+          });
+
+        if (storageError) {
+          failed++;
+          errors.push(`${file.name}: ${storageError.message}`);
+          continue;
         }
 
-        const cleanName =
-          file.name
-            .normalize(
-              "NFD"
-            )
-            .replace(
-              /[\u0300-\u036f]/g,
-              ""
-            )
-            .replace(
-              /[^a-zA-Z0-9._-]/g,
-              "_"
-            );
+        const { error: mediaError } = await supabase
+          .from("media")
+          .insert({
+            project_id: project.id,
+            storage_path: path,
+            file_name: cleanName,
+            file_type: file.type || guessMimeFromName(cleanName),
+            photo_date: null,
+          });
 
-        const uniqueId =
-          `${Date.now()}-${index}-${Math.random()
-            .toString(
-              36
-            )
-            .slice(
-              2,
-              10
-            )}`;
-
-        const path =
-          `${project.id}/${type}/${uniqueId}-${cleanName}`;
-
-        const {
-          error,
-        } =
-          await supabase.storage
-            .from(
-              "memorias"
-            )
-            .upload(
-              path,
-              file,
-              {
-                cacheControl:
-                  "3600",
-
-                upsert:
-                  false,
-
-                contentType:
-                  file.type ||
-                  undefined,
-              }
-            );
-
-        if (error) {
-          failed++;
-
-          errors.push(
-            `${file.name}: ${error.message}`
+        if (mediaError) {
+          console.error(
+            "El archivo subió, pero no se pudo registrar en media:",
+            mediaError
           );
-
-          continue;
         }
 
         uploaded++;
       } catch (error) {
         failed++;
-
         errors.push(
-          `${
-            file?.name ||
-            "Archivo"
-          }: ${
-            error?.message ||
-            "Error desconocido"
-          }`
+          `${file?.name || "Archivo"}: ${error?.message || "Error desconocido"}`
         );
       }
     }
 
-    setUploadingFiles(
-      false
-    );
+    setUploadingFiles(false);
+    await loadMedia(project.id);
 
-    await loadMedia(
-      project.id
-    );
-
-    if (
-      uploaded > 0 &&
-      failed === 0
-    ) {
+    if (uploaded > 0 && failed === 0) {
       flash(
         uploaded === 1
           ? "Archivo subido correctamente."
           : `${uploaded} archivos subidos correctamente.`
       );
-    } else if (
-      uploaded > 0 &&
-      failed > 0
-    ) {
-      flash(
-        `${uploaded} archivos subidos. ${failed} no pudieron cargarse.`
-      );
-    } else if (
-      failed > 0
-    ) {
-      flash(
-        "No se pudo subir: " +
-          (
-            errors[0] ||
-            "Supabase rechazó la carga."
-          )
-      );
+    } else if (uploaded > 0 && failed > 0) {
+      flash(`${uploaded} archivos subidos. ${failed} no pudieron cargarse.`);
+    } else if (failed > 0) {
+      flash("No se pudo subir: " + (errors[0] || "Supabase rechazó la carga."));
     }
 
-    return {
-      uploaded,
-      failed,
-      errors,
-    };
+    return { uploaded, failed, errors };
   }
 
-  async function handleMediaInput(
-    event,
-    type = "archivo"
-  ) {
-    const input =
-      event.currentTarget;
+  async function handleMediaInput(event, type = "archivo") {
+    const input = event.currentTarget;
+    const files = Array.from(input.files || []);
 
-    const files =
-      Array.from(
-        input.files ||
-          []
-      );
+    if (!files.length) return;
 
-    if (
-      !files.length
-    ) {
+    await uploadFiles(files, type);
+    input.value = "";
+  }
+
+  async function deleteMedia(item) {
+    if (!item?.path) return;
+
+    const ok = window.confirm("¿Eliminar este archivo?");
+    if (!ok) return;
+
+    const { error: storageError } = await supabase.storage
+      .from("memorias")
+      .remove([item.path]);
+
+    if (storageError) {
+      flash("No se pudo eliminar: " + storageError.message);
       return;
     }
 
-    await uploadFiles(
-      files,
-      type
+    const deleteQuery = item.id
+      ? supabase.from("media").delete().eq("id", item.id)
+      : supabase.from("media").delete().eq("storage_path", item.path);
+
+    const { error: mediaError } = await deleteQuery;
+
+    if (mediaError) {
+      console.error("No se pudo borrar el registro media:", mediaError);
+    }
+
+    await loadMedia(project.id);
+    flash("Archivo eliminado.");
+  }
+
+  async function updateMediaDate(item, value) {
+    if (!item?.id) {
+      flash("Este archivo todavía no tiene registro editable.");
+      return;
+    }
+
+    const photoDate = value || null;
+
+    setMediaFiles((previous) =>
+      previous.map((file) =>
+        file.id === item.id ? { ...file, photo_date: photoDate } : file
+      )
     );
 
-    input.value =
-      "";
-  }
-
-  async function deleteMedia(
-    item
-  ) {
-    if (
-      !item?.path
-    ) {
-      return;
-    }
-
-    const ok =
-      window.confirm(
-        "¿Eliminar este archivo?"
-      );
-
-    if (!ok) {
-      return;
-    }
-
-    const {
-      error,
-    } =
-      await supabase.storage
-        .from(
-          "memorias"
-        )
-        .remove([
-          item.path,
-        ]);
+    const { error } = await supabase
+      .from("media")
+      .update({ photo_date: photoDate })
+      .eq("id", item.id);
 
     if (error) {
-      flash(
-        "No se pudo eliminar: " +
-          error.message
-      );
-
+      flash("No se pudo guardar la fecha: " + error.message);
+      await loadMedia(project.id);
       return;
     }
 
-    await loadMedia(
-      project.id
-    );
-
-    flash(
-      "Archivo eliminado."
-    );
+    flash(photoDate ? "Fecha guardada." : "Fecha eliminada.");
   }
 
-  function useRecordedTranscript(
-    transcript,
-    file
-  ) {
+  function useRecordedTranscript(transcript, file) {
     if (file) {
-      uploadFiles(
-        [file],
-        "audio"
-      );
+      uploadFiles([file], "audio");
     }
 
     setDraftSeed({
-      id:
-        Date.now(),
-
-      text:
-        transcript ||
-        "",
+      id: Date.now(),
+      text: transcript || "",
     });
 
-    setActive(
-      "Mi Historia"
-    );
-
-    setRecorderOpen(
-      false
-    );
+    setActive("Mi Historia");
+    setRecorderOpen(false);
 
     flash(
       "Audio transcripto. Podés revisar el texto antes de guardarlo."
     );
   }
 
-  function updateDesign(
-    key,
-    value
-  ) {
-    setDesign(
-      (
-        previous
-      ) => ({
-        ...previous,
-
-        [key]:
-          value,
-      })
-    );
+  function updateDesign(key, value) {
+    setDesign((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
   }
 
-  function updateText(
-    key,
-    value
-  ) {
-    setTexts(
-      (
-        previous
-      ) => ({
-        ...previous,
-
-        [key]:
-          value,
-      })
-    );
+  function updateText(key, value) {
+    setTexts((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
   }
 
   function restorePremium() {
-    setDesign(
-      DEFAULT_DESIGN
-    );
+    setDesign(DEFAULT_DESIGN);
+    setTexts(DEFAULT_TEXTS);
 
-    setTexts(
-      DEFAULT_TEXTS
-    );
-
-    flash(
-      "Diseño PREMIUM restaurado."
-    );
+    flash("Diseño PREMIUM restaurado.");
   }
 
-  function uploadBackground(
-    event
-  ) {
-    const file =
-      event.target
-        .files?.[0];
+  function uploadBackground(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    if (!file) {
-      return;
-    }
+    const reader = new FileReader();
 
-    const reader =
-      new FileReader();
+    reader.onload = () => {
+      updateDesign("backgroundImage", reader.result);
+    };
 
-    reader.onload =
-      () => {
-        updateDesign(
-          "backgroundImage",
-          reader.result
-        );
-      };
-
-    reader.readAsDataURL(
-      file
-    );
-
-    event.target.value =
-      "";
+    reader.readAsDataURL(file);
+    event.target.value = "";
   }
 
-  function flash(
-    message
-  ) {
-    setNotice(
-      message
-    );
+  function flash(message) {
+    setNotice(message);
 
-    setTimeout(
-      () => {
-        setNotice(
-          ""
-        );
-      },
-      4000
-    );
+    setTimeout(() => {
+      setNotice("");
+    }, 4000);
   }
 
   const variables = {
-    "--bg":
-      design.background,
-
-    "--sidebar":
-      design.sidebar,
-
-    "--card":
-      hexToRgba(
-        design.card,
-        design.cardOpacity /
-          100
-      ),
-
-    "--accent":
-      design.accent,
-
-    "--text":
-      design.text,
-
-    "--secondary":
-      design.secondary,
-
-    "--border":
-      design.border,
-
-    "--radius":
-      `${design.radius}px`,
-
-    "--button-radius":
-      `${design.buttonRadius}px`,
-
-    "--sidebar-width":
-      `${design.sidebarWidth}px`,
-
-    "--content-width":
-      `${design.contentWidth}px`,
-
-    "--background-image":
-      design.backgroundImage
-        ? `url("${design.backgroundImage}")`
-        : "none",
-
-    "--background-opacity":
-      design.backgroundOpacity /
-      100,
-
-    "--background-blur":
-      `blur(${design.backgroundBlur}px)`,
-
+    "--bg": design.background,
+    "--sidebar": design.sidebar,
+    "--card": hexToRgba(design.card, design.cardOpacity / 100),
+    "--accent": design.accent,
+    "--text": design.text,
+    "--secondary": design.secondary,
+    "--border": design.border,
+    "--radius": `${design.radius}px`,
+    "--button-radius": `${design.buttonRadius}px`,
+    "--sidebar-width": `${design.sidebarWidth}px`,
+    "--content-width": `${design.contentWidth}px`,
+    "--background-image": design.backgroundImage
+      ? `url("${design.backgroundImage}")`
+      : "none",
+    "--background-opacity": design.backgroundOpacity / 100,
+    "--background-blur": `blur(${design.backgroundBlur}px)`,
     "--title-font":
-      design.titleFont ===
-      "Arial"
+      design.titleFont === "Arial"
         ? "Arial, Helvetica, sans-serif"
-        : design.titleFont ===
-            "Helvetica"
+        : design.titleFont === "Helvetica"
           ? "Helvetica, Arial, sans-serif"
           : 'Georgia, "Times New Roman", serif',
-
     "--body-font":
-      design.bodyFont ===
-      "Georgia"
+      design.bodyFont === "Georgia"
         ? 'Georgia, "Times New Roman", serif'
-        : design.bodyFont ===
-            "Helvetica"
+        : design.bodyFont === "Helvetica"
           ? "Helvetica, Arial, sans-serif"
           : "Arial, Helvetica, sans-serif",
   };
 
   return (
-    <div
-      className="appShell"
-      style={
-        variables
-      }
-    >
+    <div className="appShell" style={variables}>
       <GlobalOverlayStyles />
-
       <div className="wallpaper" />
 
-      {notice && (
-        <div className="notice">
-          {notice}
-        </div>
-      )}
+      {notice && <div className="notice">{notice}</div>}
 
       {recorderOpen && (
         <VoiceRecorder
-          onClose={() =>
-            setRecorderOpen(
-              false
-            )
-          }
-          onUse={
-            useRecordedTranscript
-          }
+          onClose={() => setRecorderOpen(false)}
+          onUse={useRecordedTranscript}
         />
       )}
 
       <aside className="sidebar">
         <EditableText
           className="brand"
-          value={
-            texts.projectName
-          }
-          onChange={(value) =>
-            updateText(
-              "projectName",
-              value
-            )
-          }
+          value={texts.projectName}
+          onChange={(value) => updateText("projectName", value)}
         />
 
         <nav className="navigation">
-          {MENU.map(
-            (item) => (
-              <button
-                key={
-                  item
-                }
-                className={
-                  active ===
-                  item
-                    ? "navItem active"
-                    : "navItem"
-                }
-                onClick={() =>
-                  setActive(
-                    item
-                  )
-                }
-              >
-                {item}
-              </button>
-            )
-          )}
+          {MENU.map((item) => (
+            <button
+              key={item}
+              className={active === item ? "navItem active" : "navItem"}
+              onClick={() => setActive(item)}
+            >
+              {item}
+            </button>
+          ))}
         </nav>
 
         <div className="sidebarFooter">
@@ -1630,133 +838,55 @@ export default function Home() {
       </aside>
 
       <main className="mainContent">
-        {active ===
-          "Inicio" && (
+        {active === "Inicio" && (
           <HomePage
-            texts={
-              texts
-            }
-            updateText={
-              updateText
-            }
-            storyCount={
-              stories.length
-            }
-            chapterCount={
-              chapters.length
-            }
-            mediaCount={
-              mediaFiles.length
-            }
-            goHistory={() =>
-              setActive(
-                "Mi Historia"
-              )
-            }
-            goBook={() =>
-              setActive(
-                "El Libro"
-              )
-            }
-            openRecorder={() =>
-              setRecorderOpen(
-                true
-              )
-            }
-            mediaInput={
-              mediaInput
-            }
-            handleMediaInput={
-              handleMediaInput
-            }
-            uploadingFiles={
-              uploadingFiles
-            }
+            texts={texts}
+            updateText={updateText}
+            storyCount={stories.length}
+            chapterCount={chapters.length}
+            mediaCount={mediaFiles.length}
+            goHistory={() => setActive("Mi Historia")}
+            goBook={() => setActive("El Libro")}
+            openRecorder={() => setRecorderOpen(true)}
+            mediaInput={mediaInput}
+            handleMediaInput={handleMediaInput}
+            uploadingFiles={uploadingFiles}
           />
         )}
 
-        {active ===
-          "Mi Historia" && (
+        {active === "Mi Historia" && (
           <HistoryPage
-            texts={
-              texts
-            }
-            updateText={
-              updateText
-            }
-            stories={
-              stories
-            }
-            saveStory={
-              saveStory
-            }
-            deleteStory={
-              deleteStory
-            }
-            loading={
-              loading
-            }
-            openRecorder={() =>
-              setRecorderOpen(
-                true
-              )
-            }
-            editorLoading={
-              editorLoading
-            }
-            editorProposal={
-              editorProposal
-            }
-            editorError={
-              editorError
-            }
-            updateEditorText={
-              updateEditorText
-            }
-            acceptEditorProposal={
-              acceptEditorProposal
-            }
-            discardEditorProposal={
-              discardEditorProposal
-            }
-            retryEditor={
-              retryEditor
-            }
-            draftSeed={
-              draftSeed
-            }
+            texts={texts}
+            updateText={updateText}
+            stories={stories}
+            saveStory={saveStory}
+            deleteStory={deleteStory}
+            loading={loading}
+            openRecorder={() => setRecorderOpen(true)}
+            editorLoading={editorLoading}
+            editorProposal={editorProposal}
+            editorError={editorError}
+            updateEditorText={updateEditorText}
+            acceptEditorProposal={acceptEditorProposal}
+            discardEditorProposal={discardEditorProposal}
+            retryEditor={retryEditor}
+            draftSeed={draftSeed}
           />
         )}
 
-        {active ===
-          "El Libro" && (
+        {active === "El Libro" && (
           <BookPage
-            texts={
-              texts
-            }
-            updateText={
-              updateText
-            }
-            chapters={
-              chapters
-            }
-            createChapter={
-              createChapter
-            }
-            updateChapter={
-              updateChapter
-            }
-            deleteChapter={
-              deleteChapter
-            }
-            stories={
-              stories
-            }
+            texts={texts}
+            updateText={updateText}
+            chapters={chapters}
+            createChapter={createChapter}
+            updateChapter={updateChapter}
+            deleteChapter={deleteChapter}
+            stories={stories}
           />
         )}
 
-        {active ===
-          "Personas" && (
+        {active === "Personas" && (
           <SimplePage
             eyebrow="PERSONAJES"
             title="Personas"
@@ -1769,80 +899,38 @@ export default function Home() {
           </SimplePage>
         )}
 
-        {active ===
-          "Archivo" && (
+        {active === "Archivo" && (
           <ArchivePage
-            stories={
-              stories
-            }
-            chapters={
-              chapters
-            }
-            mediaFiles={
-              mediaFiles
-            }
-            mediaLoading={
-              mediaLoading
-            }
-            mediaInput={
-              mediaInput
-            }
-            handleMediaInput={
-              handleMediaInput
-            }
-            uploadingFiles={
-              uploadingFiles
-            }
-            deleteMedia={
-              deleteMedia
-            }
-            refreshMedia={() =>
-              loadMedia(
-                project?.id
-              )
-            }
+            stories={stories}
+            chapters={chapters}
+            mediaFiles={mediaFiles}
+            mediaLoading={mediaLoading}
+            mediaInput={mediaInput}
+            handleMediaInput={handleMediaInput}
+            uploadingFiles={uploadingFiles}
+            deleteMedia={deleteMedia}
+            updateMediaDate={updateMediaDate}
+            refreshMedia={() => loadMedia(project?.id)}
           />
         )}
 
-        {active ===
-          "Podcast" && (
+        {active === "Podcast" && (
           <PodcastPage
-            texts={
-              texts
-            }
-            updateText={
-              updateText
-            }
-            podcastInput={
-              podcastInput
-            }
-            handleMediaInput={
-              handleMediaInput
-            }
-            uploadingFiles={
-              uploadingFiles
-            }
+            texts={texts}
+            updateText={updateText}
+            podcastInput={podcastInput}
+            handleMediaInput={handleMediaInput}
+            uploadingFiles={uploadingFiles}
           />
         )}
 
-        {active ===
-          "Diseño" && (
+        {active === "Diseño" && (
           <DesignPage
-            design={
-              design
-            }
-            updateDesign={
-              updateDesign
-            }
-            restorePremium={
-              restorePremium
-            }
-            backgroundInput={
-              backgroundInput
-            }
-            uploadBackground={
-              uploadBackground
-            }
+            design={design}
+            updateDesign={updateDesign}
+            restorePremium={restorePremium}
+            backgroundInput={backgroundInput}
+            uploadBackground={uploadBackground}
           />
         )}
       </main>
@@ -2334,6 +1422,54 @@ body.nqs-lock {
   color: #e8abab;
 }
 
+.mediaChronologyHint {
+  margin-top: 7px;
+  color: var(--secondary);
+  font-size: 11px;
+}
+
+.mediaSortSelect {
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: var(--button-radius);
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.3);
+  color: var(--text);
+}
+
+.mediaDateEditor {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mediaDateEditor label {
+  color: var(--secondary);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.mediaDateEditor input[type="date"] {
+  width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.25);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+.mediaDateEditor small {
+  color: var(--secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .mediaEmpty {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
@@ -2404,114 +1540,42 @@ body.nqs-lock {
   );
 }
 
-function VoiceRecorder({
-  onClose,
-  onUse,
-}) {
-  const [
-    portalReady,
-    setPortalReady,
-  ] = useState(false);
+function VoiceRecorder({ onClose, onUse }) {
+  const [portalReady, setPortalReady] = useState(false);
+  const [recorder, setRecorder] = useState(null);
+  const [stream, setStream] = useState(null);
+  const [status, setStatus] = useState("idle");
+  const [seconds, setSeconds] = useState(0);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [audioFile, setAudioFile] = useState(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [error, setError] = useState("");
 
-  const [
-    recorder,
-    setRecorder,
-  ] = useState(null);
-
-  const [
-    stream,
-    setStream,
-  ] = useState(null);
-
-  const [
-    status,
-    setStatus,
-  ] = useState("idle");
-
-  const [
-    seconds,
-    setSeconds,
-  ] = useState(0);
-
-  const [
-    audioUrl,
-    setAudioUrl,
-  ] = useState("");
-
-  const [
-    audioFile,
-    setAudioFile,
-  ] = useState(null);
-
-  const [
-    transcribing,
-    setTranscribing,
-  ] = useState(false);
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-  const chunksRef =
-    useRef([]);
-
-  const timerRef =
-    useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
 
   useEffect(() => {
-    setPortalReady(
-      true
-    );
+    setPortalReady(true);
 
-    document.documentElement.classList.add(
-      "nqs-lock"
-    );
-
-    document.body.classList.add(
-      "nqs-lock"
-    );
+    document.documentElement.classList.add("nqs-lock");
+    document.body.classList.add("nqs-lock");
 
     return () => {
-      document.documentElement.classList.remove(
-        "nqs-lock"
-      );
+      document.documentElement.classList.remove("nqs-lock");
+      document.body.classList.remove("nqs-lock");
 
-      document.body.classList.remove(
-        "nqs-lock"
-      );
+      clearInterval(timerRef.current);
 
-      clearInterval(
-        timerRef.current
-      );
+      stream?.getTracks()?.forEach((track) => track.stop());
 
-      stream
-        ?.getTracks()
-        ?.forEach(
-          (track) =>
-            track.stop()
-        );
-
-      if (
-        audioUrl
-      ) {
-        URL.revokeObjectURL(
-          audioUrl
-        );
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
       }
     };
-  }, [
-    stream,
-    audioUrl,
-  ]);
+  }, [stream, audioUrl]);
 
   function bestMimeType() {
-    if (
-      typeof MediaRecorder ===
-      "undefined"
-    ) {
-      return "";
-    }
+    if (typeof MediaRecorder === "undefined") return "";
 
     const options = [
       "audio/mp4",
@@ -2520,12 +1584,7 @@ function VoiceRecorder({
     ];
 
     return (
-      options.find(
-        (type) =>
-          MediaRecorder.isTypeSupported?.(
-            type
-          )
-      ) || ""
+      options.find((type) => MediaRecorder.isTypeSupported?.(type)) || ""
     );
   }
 
@@ -2533,144 +1592,69 @@ function VoiceRecorder({
     setError("");
 
     try {
-      if (
-        !navigator.mediaDevices
-          ?.getUserMedia
-      ) {
-        throw new Error(
-          "Este navegador no permite acceder al micrófono."
-        );
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Este navegador no permite acceder al micrófono.");
       }
 
-      const micStream =
-        await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
+      const micStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
 
-      const mimeType =
-        bestMimeType();
+      const mimeType = bestMimeType();
 
-      const newRecorder =
-        mimeType
-          ? new MediaRecorder(
-              micStream,
-              {
-                mimeType,
-              }
-            )
-          : new MediaRecorder(
-              micStream
-            );
+      const newRecorder = mimeType
+        ? new MediaRecorder(micStream, { mimeType })
+        : new MediaRecorder(micStream);
 
-      chunksRef.current =
-        [];
+      chunksRef.current = [];
 
-      newRecorder.ondataavailable =
-        (event) => {
-          if (
-            event.data &&
-            event.data.size >
-              0
-          ) {
-            chunksRef.current.push(
-              event.data
-            );
-          }
-        };
+      newRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
 
-      newRecorder.onstop =
-        () => {
-          const type =
-            newRecorder.mimeType ||
-            mimeType ||
-            "audio/webm";
+      newRecorder.onstop = () => {
+        const type =
+          newRecorder.mimeType ||
+          mimeType ||
+          "audio/webm";
 
-          const blob =
-            new Blob(
-              chunksRef.current,
-              {
-                type,
-              }
-            );
+        const blob = new Blob(chunksRef.current, { type });
 
-          const extension =
-            type.includes(
-              "mp4"
-            )
-              ? "m4a"
-              : "webm";
+        const extension = type.includes("mp4")
+          ? "m4a"
+          : "webm";
 
-          const file =
-            new File(
-              [blob],
-              `recuerdo-${Date.now()}.${extension}`,
-              {
-                type,
-              }
-            );
-
-          const url =
-            URL.createObjectURL(
-              blob
-            );
-
-          setAudioFile(
-            file
-          );
-
-          setAudioUrl(
-            url
-          );
-
-          setStatus(
-            "finished"
-          );
-
-          micStream
-            .getTracks()
-            .forEach(
-              (track) =>
-                track.stop()
-            );
-
-          clearInterval(
-            timerRef.current
-          );
-        };
-
-      newRecorder.start(
-        1000
-      );
-
-      setStream(
-        micStream
-      );
-
-      setRecorder(
-        newRecorder
-      );
-
-      setSeconds(
-        0
-      );
-
-      setStatus(
-        "recording"
-      );
-
-      timerRef.current =
-        setInterval(
-          () => {
-            setSeconds(
-              (
-                previous
-              ) =>
-                previous +
-                1
-            );
-          },
-          1000
+        const file = new File(
+          [blob],
+          `recuerdo-${Date.now()}.${extension}`,
+          { type }
         );
+
+        const url = URL.createObjectURL(blob);
+
+        setAudioFile(file);
+        setAudioUrl(url);
+        setStatus("finished");
+
+        micStream
+          .getTracks()
+          .forEach((track) => track.stop());
+
+        clearInterval(timerRef.current);
+      };
+
+      newRecorder.start(1000);
+
+      setStream(micStream);
+      setRecorder(newRecorder);
+      setSeconds(0);
+      setStatus("recording");
+
+      timerRef.current = setInterval(() => {
+        setSeconds((previous) => previous + 1);
+      }, 1000);
     } catch (err) {
       setError(
         err?.message ||
@@ -2680,77 +1664,38 @@ function VoiceRecorder({
   }
 
   function pauseRecording() {
-    if (
-      recorder?.state ===
-      "recording"
-    ) {
+    if (recorder?.state === "recording") {
       recorder.pause();
-
-      setStatus(
-        "paused"
-      );
-
-      clearInterval(
-        timerRef.current
-      );
+      setStatus("paused");
+      clearInterval(timerRef.current);
     }
   }
 
   function resumeRecording() {
-    if (
-      recorder?.state ===
-      "paused"
-    ) {
+    if (recorder?.state === "paused") {
       recorder.resume();
+      setStatus("recording");
 
-      setStatus(
-        "recording"
-      );
-
-      timerRef.current =
-        setInterval(
-          () => {
-            setSeconds(
-              (
-                previous
-              ) =>
-                previous +
-                1
-            );
-          },
-          1000
-        );
+      timerRef.current = setInterval(() => {
+        setSeconds((previous) => previous + 1);
+      }, 1000);
     }
   }
 
   function stopRecording() {
-    if (
-      recorder &&
-      recorder.state !==
-        "inactive"
-    ) {
+    if (recorder && recorder.state !== "inactive") {
       recorder.stop();
     }
   }
 
   async function transcribe() {
-    if (
-      !audioFile
-    ) {
-      return;
-    }
+    if (!audioFile) return;
 
-    setTranscribing(
-      true
-    );
-
-    setError(
-      ""
-    );
+    setTranscribing(true);
+    setError("");
 
     try {
-      const form =
-        new FormData();
+      const form = new FormData();
 
       form.append(
         "audio",
@@ -2758,90 +1703,65 @@ function VoiceRecorder({
         audioFile.name
       );
 
-      const response =
-        await fetch(
-          "/api/transcribe",
-          {
-            method:
-              "POST",
+      const response = await fetch(
+        "/api/transcribe",
+        {
+          method: "POST",
+          body: form,
+        }
+      );
 
-            body:
-              form,
-          }
-        );
+      const data = await response.json();
 
-      const data =
-        await response.json();
-
-      if (
-        !response.ok
-      ) {
+      if (!response.ok) {
         throw new Error(
           data?.error ||
             "No se pudo transcribir el audio."
         );
       }
 
-      const transcript =
-        data?.text?.trim();
+      const transcript = data?.text?.trim();
 
-      if (
-        !transcript
-      ) {
+      if (!transcript) {
         throw new Error(
           "La transcripción llegó vacía."
         );
       }
 
-      onUse(
-        transcript,
-        audioFile
-      );
+      onUse(transcript, audioFile);
     } catch (err) {
       setError(
         err?.message ||
           "No se pudo transcribir el audio."
       );
     } finally {
-      setTranscribing(
-        false
-      );
+      setTranscribing(false);
     }
   }
 
   function closeRecorder() {
     if (
       recorder &&
-      recorder.state !==
-        "inactive"
+      recorder.state !== "inactive"
     ) {
       recorder.stop();
     }
 
     stream
       ?.getTracks()
-      ?.forEach(
-        (track) =>
-          track.stop()
-      );
+      ?.forEach((track) => track.stop());
 
     onClose();
   }
 
-  if (
-    !portalReady
-  ) {
-    return null;
-  }
+  if (!portalReady) return null;
 
   return createPortal(
     <div className="nqsOverlay">
       <div className="nqsOverlayTop">
         <button
           className="nqsOverlayBack"
-          onClick={
-            closeRecorder
-          }
+          onClick={closeRecorder}
         >
           ← Volver
         </button>
@@ -2857,8 +1777,7 @@ function VoiceRecorder({
         <div className="nqsRecorderCard">
           <div
             className={
-              status ===
-              "recording"
+              status === "recording"
                 ? "nqsMicCircle recording"
                 : "nqsMicCircle"
             }
@@ -2875,110 +1794,82 @@ function VoiceRecorder({
             convertimos en texto y Claude lo transforma en material para el libro.
           </p>
 
-          {status !==
-            "idle" && (
+          {status !== "idle" && (
             <div className="nqsTimer">
-              {formatTimer(
-                seconds
-              )}
+              {formatTimer(seconds)}
             </div>
           )}
 
-          {status ===
-            "idle" && (
+          {status === "idle" && (
             <button
               className="nqsRecButton nqsRecPrimary"
-              onClick={
-                startRecording
-              }
+              onClick={startRecording}
             >
               ● Iniciar grabación
             </button>
           )}
 
-          {status ===
-            "recording" && (
+          {status === "recording" && (
             <div className="nqsRecorderActions">
               <button
                 className="nqsRecButton nqsRecSecondary"
-                onClick={
-                  pauseRecording
-                }
+                onClick={pauseRecording}
               >
                 Ⅱ Pausar
               </button>
 
               <button
                 className="nqsRecButton nqsRecDanger"
-                onClick={
-                  stopRecording
-                }
+                onClick={stopRecording}
               >
                 ■ Finalizar
               </button>
             </div>
           )}
 
-          {status ===
-            "paused" && (
+          {status === "paused" && (
             <div className="nqsRecorderActions">
               <button
                 className="nqsRecButton nqsRecPrimary"
-                onClick={
-                  resumeRecording
-                }
+                onClick={resumeRecording}
               >
                 ▶ Continuar
               </button>
 
               <button
                 className="nqsRecButton nqsRecDanger"
-                onClick={
-                  stopRecording
-                }
+                onClick={stopRecording}
               >
                 ■ Finalizar
               </button>
             </div>
           )}
 
-          {status ===
-            "finished" && (
+          {status === "finished" && (
             <>
               {audioUrl && (
                 <audio
                   className="nqsAudioPreview"
                   controls
-                  src={
-                    audioUrl
-                  }
+                  src={audioUrl}
                 />
               )}
 
               <div
                 className="nqsRecorderActions"
-                style={{
-                  marginTop:
-                    24,
-                }}
+                style={{ marginTop: 24 }}
               >
                 <button
                   className="nqsRecButton nqsRecSecondary"
-                  onClick={
-                    startRecording
-                  }
+                  onClick={startRecording}
                 >
                   Grabar de nuevo
                 </button>
 
                 <button
                   className="nqsRecButton nqsRecPrimary"
-                  disabled={
-                    transcribing
-                  }
-                  onClick={
-                    transcribe
-                  }
+                  disabled={transcribing}
+                  onClick={transcribe}
                 >
                   {transcribing
                     ? "Transcribiendo..."
@@ -2991,24 +1882,19 @@ function VoiceRecorder({
           {error && (
             <p
               className="nqsRecorderStatus"
-              style={{
-                color:
-                  "#ef9e9e",
-              }}
+              style={{ color: "#ef9e9e" }}
             >
               {error}
             </p>
           )}
 
-          {status ===
-            "recording" && (
+          {status === "recording" && (
             <p className="nqsRecorderStatus">
               Micrófono activo · grabando
             </p>
           )}
 
-          {status ===
-            "paused" && (
+          {status === "paused" && (
             <p className="nqsRecorderStatus">
               Grabación pausada
             </p>
@@ -3049,46 +1935,32 @@ function HomePage({
         <EditableText
           tag="h1"
           className="mainTitle"
-          value={
-            texts.homeTitle
-          }
+          value={texts.homeTitle}
           onChange={(value) =>
-            updateText(
-              "homeTitle",
-              value
-            )
+            updateText("homeTitle", value)
           }
         />
 
         <EditableText
           tag="p"
           className="mainSubtitle"
-          value={
-            texts.homeSubtitle
-          }
+          value={texts.homeSubtitle}
           onChange={(value) =>
-            updateText(
-              "homeSubtitle",
-              value
-            )
+            updateText("homeSubtitle", value)
           }
         />
 
         <div className="mainActions">
           <button
             className="primaryButton hugeButton"
-            onClick={
-              goHistory
-            }
+            onClick={goHistory}
           >
             ✎ Escribir un recuerdo
           </button>
 
           <button
             className="secondaryButton hugeButton"
-            onClick={
-              openRecorder
-            }
+            onClick={openRecorder}
           >
             🎙 Contarlo con audio
           </button>
@@ -3096,10 +1968,7 @@ function HomePage({
       </section>
 
       <section className="workflow">
-        <Workflow
-          n="01"
-          title="Contás un recuerdo"
-        >
+        <Workflow n="01" title="Contás un recuerdo">
           Escribís o hablás libremente. No hace falta ordenar nada.
         </Workflow>
 
@@ -3107,10 +1976,7 @@ function HomePage({
           →
         </div>
 
-        <Workflow
-          n="02"
-          title="La IA lo analiza"
-        >
+        <Workflow n="02" title="La IA lo analiza">
           Claude detecta personas, lugares, períodos y dónde debería entrar en el libro.
         </Workflow>
 
@@ -3118,67 +1984,40 @@ function HomePage({
           →
         </div>
 
-        <Workflow
-          n="03"
-          title="Vos decidís"
-        >
+        <Workflow n="03" title="Vos decidís">
           Revisás la propuesta y recién entonces la incorporás al manuscrito.
         </Workflow>
       </section>
 
       <section className="homeStats">
         <div className="stat">
-          <small>
-            RECUERDOS
-          </small>
-
-          <strong>
-            {storyCount}
-          </strong>
+          <small>RECUERDOS</small>
+          <strong>{storyCount}</strong>
         </div>
 
         <div className="stat">
-          <small>
-            CAPÍTULOS
-          </small>
-
-          <strong>
-            {chapterCount}
-          </strong>
+          <small>CAPÍTULOS</small>
+          <strong>{chapterCount}</strong>
         </div>
 
         <div className="stat">
-          <small>
-            ARCHIVOS
-          </small>
-
-          <strong>
-            {mediaCount}
-          </strong>
+          <small>ARCHIVOS</small>
+          <strong>{mediaCount}</strong>
         </div>
 
         <button
           className="openBook"
-          onClick={
-            goBook
-          }
+          onClick={goBook}
         >
-          <span>
-            EL LIBRO
-          </span>
-
-          <strong>
-            Ver cómo va quedando →
-          </strong>
+          <span>EL LIBRO</span>
+          <strong>Ver cómo va quedando →</strong>
         </button>
       </section>
 
       <section className="quickArchive">
         <button
           className="uploadQuick"
-          disabled={
-            uploadingFiles
-          }
+          disabled={uploadingFiles}
           onClick={() =>
             mediaInput.current?.click()
           }
@@ -3189,9 +2028,7 @@ function HomePage({
         </button>
 
         <input
-          ref={
-            mediaInput
-          }
+          ref={mediaInput}
           hidden
           multiple
           type="file"
@@ -3208,24 +2045,12 @@ function HomePage({
   );
 }
 
-function Workflow({
-  n,
-  title,
-  children,
-}) {
+function Workflow({ n, title, children }) {
   return (
     <div className="workflowCard">
-      <span>
-        {n}
-      </span>
-
-      <h3>
-        {title}
-      </h3>
-
-      <p>
-        {children}
-      </p>
+      <span>{n}</span>
+      <h3>{title}</h3>
+      <p>{children}</p>
     </div>
   );
 }
@@ -3247,30 +2072,13 @@ function HistoryPage({
   retryEditor,
   draftSeed,
 }) {
-  const [
-    title,
-    setTitle,
-  ] = useState("");
-
-  const [
-    text,
-    setText,
-  ] = useState("");
-
-  const [
-    immersive,
-    setImmersive,
-  ] = useState(false);
-
-  const [
-    portalReady,
-    setPortalReady,
-  ] = useState(false);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [immersive, setImmersive] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
 
   useEffect(() => {
-    setPortalReady(
-      true
-    );
+    setPortalReady(true);
 
     try {
       const savedTitle =
@@ -3283,42 +2091,17 @@ function HistoryPage({
           "nqs_story_draft_text"
         );
 
-      if (
-        savedTitle
-      ) {
-        setTitle(
-          savedTitle
-        );
-      }
-
-      if (
-        savedText
-      ) {
-        setText(
-          savedText
-        );
-      }
+      if (savedTitle) setTitle(savedTitle);
+      if (savedText) setText(savedText);
     } catch {}
   }, []);
 
   useEffect(() => {
-    if (
-      !draftSeed?.id
-    ) {
-      return;
-    }
+    if (!draftSeed?.id) return;
 
-    setText(
-      draftSeed.text ||
-        ""
-    );
-
-    setImmersive(
-      true
-    );
-  }, [
-    draftSeed?.id,
-  ]);
+    setText(draftSeed.text || "");
+    setImmersive(true);
+  }, [draftSeed?.id]);
 
   useEffect(() => {
     try {
@@ -3339,24 +2122,15 @@ function HistoryPage({
   }, [text]);
 
   async function save() {
-    const ok =
-      await saveStory({
-        title,
-        text,
-      });
+    const ok = await saveStory({
+      title,
+      text,
+    });
 
     if (ok) {
-      setTitle(
-        ""
-      );
-
-      setText(
-        ""
-      );
-
-      setImmersive(
-        false
-      );
+      setTitle("");
+      setText("");
+      setImmersive(false);
 
       try {
         localStorage.removeItem(
@@ -3376,35 +2150,17 @@ function HistoryPage({
         immersive &&
         createPortal(
           <ImmersiveWriter
-            title={
-              title
-            }
-            setTitle={
-              setTitle
-            }
-            text={
-              text
-            }
-            setText={
-              setText
-            }
+            title={title}
+            setTitle={setTitle}
+            text={text}
+            setText={setText}
             close={() =>
-              setImmersive(
-                false
-              )
+              setImmersive(false)
             }
-            save={
-              save
-            }
-            loading={
-              loading
-            }
-            editorLoading={
-              editorLoading
-            }
-            openRecorder={
-              openRecorder
-            }
+            save={save}
+            loading={loading}
+            editorLoading={editorLoading}
+            openRecorder={openRecorder}
           />,
           document.body
         )}
@@ -3416,9 +2172,7 @@ function HistoryPage({
       <EditableText
         tag="h1"
         className="pageTitle"
-        value={
-          texts.historyTitle
-        }
+        value={texts.historyTitle}
         onChange={(value) =>
           updateText(
             "historyTitle",
@@ -3430,9 +2184,7 @@ function HistoryPage({
       <EditableText
         tag="p"
         className="pageSubtitle"
-        value={
-          texts.historySubtitle
-        }
+        value={texts.historySubtitle}
         onChange={(value) =>
           updateText(
             "historySubtitle",
@@ -3450,9 +2202,7 @@ function HistoryPage({
 
             <button
               className="audioMini"
-              onClick={
-                openRecorder
-              }
+              onClick={openRecorder}
             >
               🎙 Grabar audio
             </button>
@@ -3460,9 +2210,7 @@ function HistoryPage({
 
           <input
             className="storyTitleInput"
-            value={
-              title
-            }
+            value={title}
             onChange={(event) =>
               setTitle(
                 event.target.value
@@ -3473,18 +2221,14 @@ function HistoryPage({
 
           <textarea
             className="storyTextarea"
-            value={
-              text
-            }
+            value={text}
             onChange={(event) =>
               setText(
                 event.target.value
               )
             }
             onFocus={() =>
-              setImmersive(
-                true
-              )
+              setImmersive(true)
             }
             placeholder="Escribí el recuerdo como te venga a la memoria..."
           />
@@ -3497,9 +2241,7 @@ function HistoryPage({
             <button
               className="primaryButton"
               onClick={() =>
-                setImmersive(
-                  true
-                )
+                setImmersive(true)
               }
             >
               Escribir
@@ -3543,19 +2285,14 @@ function HistoryPage({
             </strong>
 
             <small>
-              {countWords(
-                text
-              )}{" "}
-              palabras · guardado automáticamente
+              {countWords(text)} palabras · guardado automáticamente
             </small>
           </div>
 
           <button
             className="secondaryButton"
             onClick={() =>
-              setImmersive(
-                true
-              )
+              setImmersive(true)
             }
           >
             Continuar escribiendo
@@ -3564,27 +2301,13 @@ function HistoryPage({
       )}
 
       <EditorPanel
-        loading={
-          editorLoading
-        }
-        proposal={
-          editorProposal
-        }
-        error={
-          editorError
-        }
-        updateEditorText={
-          updateEditorText
-        }
-        accept={
-          acceptEditorProposal
-        }
-        discard={
-          discardEditorProposal
-        }
-        retry={
-          retryEditor
-        }
+        loading={editorLoading}
+        proposal={editorProposal}
+        error={editorError}
+        updateEditorText={updateEditorText}
+        accept={acceptEditorProposal}
+        discard={discardEditorProposal}
+        retry={retryEditor}
       />
 
       <div className="savedSection">
@@ -3604,22 +2327,17 @@ function HistoryPage({
           </strong>
         </div>
 
-        {stories.length ===
-        0 ? (
+        {stories.length === 0 ? (
           <div className="emptyPanel">
             Todavía no hay recuerdos.
           </div>
         ) : (
           <div className="storiesList">
             {stories.map(
-              (
-                story
-              ) => (
+              (story) => (
                 <article
                   className="storyCard"
-                  key={
-                    story.id
-                  }
+                  key={story.id}
                 >
                   <div className="storyTop">
                     <div>
@@ -3648,9 +2366,7 @@ function HistoryPage({
                   </div>
 
                   <p>
-                    {
-                      story.original_text
-                    }
+                    {story.original_text}
                   </p>
                 </article>
               )
@@ -3686,17 +2402,12 @@ function ImmersiveWriter({
     );
 
     const timer =
-      setTimeout(
-        () => {
-          textRef.current?.focus();
-        },
-        150
-      );
+      setTimeout(() => {
+        textRef.current?.focus();
+      }, 150);
 
     return () => {
-      clearTimeout(
-        timer
-      );
+      clearTimeout(timer);
 
       document.documentElement.classList.remove(
         "nqs-lock"
@@ -3712,9 +2423,7 @@ function ImmersiveWriter({
     <div className="nqsImmersiveOverlay">
       <header className="nqsImmersiveTop">
         <button
-          onClick={
-            close
-          }
+          onClick={close}
         >
           ← Volver
         </button>
@@ -3742,9 +2451,7 @@ function ImmersiveWriter({
 
           <input
             className="nqsImmersiveTitle"
-            value={
-              title
-            }
+            value={title}
             onChange={(event) =>
               setTitle(
                 event.target.value
@@ -3754,13 +2461,9 @@ function ImmersiveWriter({
           />
 
           <textarea
-            ref={
-              textRef
-            }
+            ref={textRef}
             className="nqsImmersiveText"
-            value={
-              text
-            }
+            value={text}
             onChange={(event) =>
               setText(
                 event.target.value
@@ -3773,23 +2476,17 @@ function ImmersiveWriter({
             <div>
               <strong
                 style={{
-                  color:
-                    "#ddc99e",
+                  color: "#ddc99e",
                 }}
               >
-                {countWords(
-                  text
-                )}{" "}
-                palabras
+                {countWords(text)} palabras
               </strong>
             </div>
 
             <div className="nqsRecorderActions">
               <button
                 className="nqsRecButton nqsRecSecondary"
-                onClick={
-                  openRecorder
-                }
+                onClick={openRecorder}
               >
                 🎙 Audio
               </button>
@@ -3801,9 +2498,7 @@ function ImmersiveWriter({
                   editorLoading ||
                   !text.trim()
                 }
-                onClick={
-                  save
-                }
+                onClick={save}
               >
                 {loading
                   ? "Guardando..."
@@ -3837,28 +2532,18 @@ function EditorPanel({
   }
 
   const panel = {
-    marginTop:
-      28,
-
-    marginBottom:
-      38,
-
-    padding:
-      28,
-
+    marginTop: 28,
+    marginBottom: 38,
+    padding: 28,
     border:
       "1px solid var(--border)",
-
     borderRadius:
       "var(--radius)",
-
     background:
       "var(--card)",
   };
 
-  if (
-    loading
-  ) {
+  if (loading) {
     return (
       <section style={panel}>
         <h2>
@@ -3868,24 +2553,18 @@ function EditorPanel({
     );
   }
 
-  if (
-    error
-  ) {
+  if (error) {
     return (
       <section style={panel}>
         <h2>
           No se pudo analizar
         </h2>
 
-        <p>
-          {error}
-        </p>
+        <p>{error}</p>
 
         <button
           className="secondaryButton"
-          onClick={
-            retry
-          }
+          onClick={retry}
         >
           Volver a intentar
         </button>
@@ -3925,79 +2604,48 @@ function EditorPanel({
           )
         }
         style={{
-          width:
-            "100%",
-
-          minHeight:
-            300,
-
-          boxSizing:
-            "border-box",
-
-          marginTop:
-            10,
-
-          padding:
-            20,
-
+          width: "100%",
+          minHeight: 300,
+          boxSizing: "border-box",
+          marginTop: 10,
+          padding: 20,
           border:
             "1px solid var(--border)",
-
-          borderRadius:
-            14,
-
+          borderRadius: 14,
           background:
             "rgba(0,0,0,.25)",
-
           color:
             "var(--text)",
-
-          fontSize:
-            18,
-
-          lineHeight:
-            1.7,
+          fontSize: 18,
+          lineHeight: 1.7,
         }}
       />
 
       <div
         style={{
-          display:
-            "flex",
-
-          gap:
-            12,
-
-          marginTop:
-            20,
-
-          flexWrap:
-            "wrap",
+          display: "flex",
+          gap: 12,
+          marginTop: 20,
+          flexWrap: "wrap",
         }}
       >
         <button
           className="primaryButton"
-          onClick={
-            accept
-          }
+          onClick={accept}
         >
           Aceptar en el libro
         </button>
 
         <button
           className="secondaryButton"
-          onClick={
-            retry
-          }
+          onClick={retry}
         >
           Reescribir con IA
         </button>
 
         <button
           className="secondaryButton"
-          onClick={
-            discard
-          }
+          onClick={discard}
         >
           Descartar
         </button>
@@ -4024,9 +2672,7 @@ function BookPage({
       <EditableText
         tag="h1"
         className="pageTitle"
-        value={
-          texts.bookTitle
-        }
+        value={texts.bookTitle}
         onChange={(value) =>
           updateText(
             "bookTitle",
@@ -4038,9 +2684,7 @@ function BookPage({
       <EditableText
         tag="p"
         className="pageSubtitle"
-        value={
-          texts.bookSubtitle
-        }
+        value={texts.bookSubtitle}
         onChange={(value) =>
           updateText(
             "bookSubtitle",
@@ -4072,16 +2716,13 @@ function BookPage({
 
         <button
           className="primaryButton"
-          onClick={
-            createChapter
-          }
+          onClick={createChapter}
         >
           + Nuevo capítulo
         </button>
       </div>
 
-      {chapters.length ===
-      0 ? (
+      {chapters.length === 0 ? (
         <div className="bookEmpty">
           <h2>
             El libro todavía está esperando su primer capítulo.
@@ -4095,28 +2736,17 @@ function BookPage({
               index
             ) => (
               <ChapterEditor
-                key={
-                  chapter.id
-                }
-                chapter={
-                  chapter
-                }
-                number={
-                  index +
-                  1
-                }
+                key={chapter.id}
+                chapter={chapter}
+                number={index + 1}
                 updateChapter={
                   updateChapter
                 }
                 deleteChapter={
                   deleteChapter
                 }
-                stories={
-                  stories
-                }
-                chapters={
-                  chapters
-                }
+                stories={stories}
+                chapters={chapters}
               />
             )
           )}
@@ -4134,129 +2764,80 @@ function ChapterEditor({
   stories,
   chapters,
 }) {
-  const [
-    title,
-    setTitle,
-  ] = useState(
-    chapter.title ||
-      ""
-  );
+  const [title, setTitle] =
+    useState(
+      chapter.title || ""
+    );
 
-  const [
-    content,
-    setContent,
-  ] = useState(
-    chapter.content ||
-      ""
-  );
+  const [content, setContent] =
+    useState(
+      chapter.content || ""
+    );
 
-  const [
-    aiLoading,
-    setAiLoading,
-  ] = useState(false);
+  const [aiLoading, setAiLoading] =
+    useState(false);
 
-  const [
-    aiProposal,
-    setAiProposal,
-  ] = useState(null);
+  const [aiProposal, setAiProposal] =
+    useState(null);
 
-  const [
-    aiError,
-    setAiError,
-  ] = useState("");
+  const [aiError, setAiError] =
+    useState("");
 
   useEffect(() => {
     setTitle(
-      chapter.title ||
-        ""
+      chapter.title || ""
     );
 
     setContent(
-      chapter.content ||
-        ""
+      chapter.content || ""
     );
   }, [chapter]);
 
-  async function runAI(
-    action
-  ) {
-    if (
-      !content.trim()
-    ) {
-      return;
-    }
+  async function runAI(action) {
+    if (!content.trim()) return;
 
-    setAiLoading(
-      true
-    );
-
-    setAiError(
-      ""
-    );
-
-    setAiProposal(
-      null
-    );
+    setAiLoading(true);
+    setAiError("");
+    setAiProposal(null);
 
     try {
-      const response =
-        await fetch(
-          "/api/editor",
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
+      const response = await fetch(
+        "/api/editor",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            mode: "chapter",
+            action,
+            chapter: {
+              ...chapter,
+              title,
+              content,
             },
-
-            body:
-              JSON.stringify({
-                mode:
-                  "chapter",
-
-                action,
-
-                chapter: {
-                  ...chapter,
-
-                  title,
-
-                  content,
-                },
-
-                memories:
-                  stories,
-
-                chapters,
-              }),
-          }
-        );
+            memories: stories,
+            chapters,
+          }),
+        }
+      );
 
       const data =
         await response.json();
 
-      if (
-        !response.ok
-      ) {
+      if (!response.ok) {
         throw new Error(
           data?.error ||
             "Claude no pudo editar el capítulo."
         );
       }
 
-      setAiProposal(
-        data.result
-      );
+      setAiProposal(data.result);
     } catch (error) {
-      setAiError(
-        error.message
-      );
+      setAiError(error.message);
     } finally {
-      setAiLoading(
-        false
-      );
+      setAiLoading(false);
     }
   }
 
@@ -4266,15 +2847,9 @@ function ChapterEditor({
         ?.proposed_text
         ?.trim();
 
-    if (
-      !newText
-    ) {
-      return;
-    }
+    if (!newText) return;
 
-    setContent(
-      newText
-    );
+    setContent(newText);
 
     await updateChapter(
       chapter.id,
@@ -4282,18 +2857,14 @@ function ChapterEditor({
       newText
     );
 
-    setAiProposal(
-      null
-    );
+    setAiProposal(null);
   }
 
   return (
     <article className="chapterEditor">
       <div className="chapterNumber">
         CAPÍTULO{" "}
-        {String(
-          number
-        ).padStart(
+        {String(number).padStart(
           2,
           "0"
         )}
@@ -4301,9 +2872,7 @@ function ChapterEditor({
 
       <input
         className="chapterTitleInput"
-        value={
-          title
-        }
+        value={title}
         onChange={(event) =>
           setTitle(
             event.target.value
@@ -4320,9 +2889,7 @@ function ChapterEditor({
 
       <textarea
         className="chapterContent"
-        value={
-          content
-        }
+        value={content}
         onChange={(event) =>
           setContent(
             event.target.value
@@ -4339,17 +2906,11 @@ function ChapterEditor({
 
       <div
         style={{
-          marginTop:
-            18,
-
-          padding:
-            18,
-
+          marginTop: 18,
+          padding: 18,
           border:
             "1px solid var(--border)",
-
-          borderRadius:
-            14,
+          borderRadius: 14,
         }}
       >
         <div className="eyebrow">
@@ -4358,14 +2919,9 @@ function ChapterEditor({
 
         <div
           style={{
-            display:
-              "flex",
-
-            flexWrap:
-              "wrap",
-
-            gap:
-              8,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
           }}
         >
           {[
@@ -4373,32 +2929,26 @@ function ChapterEditor({
               "improve",
               "Mejorar redacción",
             ],
-
             [
               "literary",
               "Más literario",
             ],
-
             [
               "emotional",
               "Más emocional",
             ],
-
             [
               "cinematic",
               "Más cinematográfico",
             ],
-
             [
               "expand",
               "Ampliar",
             ],
-
             [
               "shorten",
               "Resumir",
             ],
-
             [
               "coherence",
               "Revisar coherencia",
@@ -4409,17 +2959,11 @@ function ChapterEditor({
               label,
             ]) => (
               <button
-                key={
-                  action
-                }
+                key={action}
                 className="secondaryButton"
-                disabled={
-                  aiLoading
-                }
+                disabled={aiLoading}
                 onClick={() =>
-                  runAI(
-                    action
-                  )
+                  runAI(action)
                 }
               >
                 {label}
@@ -4443,8 +2987,7 @@ function ChapterEditor({
         {aiProposal && (
           <div
             style={{
-              marginTop:
-                18,
+              marginTop: 18,
             }}
           >
             <textarea
@@ -4455,15 +2998,10 @@ function ChapterEditor({
               }
               onChange={(event) =>
                 setAiProposal(
-                  (
-                    previous
-                  ) => ({
+                  (previous) => ({
                     ...previous,
-
                     proposed_text:
-                      event
-                        .target
-                        .value,
+                      event.target.value,
                   })
                 )
               }
@@ -4471,9 +3009,7 @@ function ChapterEditor({
 
             <button
               className="primaryButton"
-              onClick={
-                acceptAI
-              }
+              onClick={acceptAI}
             >
               Aceptar propuesta
             </button>
@@ -4481,9 +3017,7 @@ function ChapterEditor({
             <button
               className="secondaryButton"
               onClick={() =>
-                setAiProposal(
-                  null
-                )
+                setAiProposal(null)
               }
             >
               Descartar
@@ -4520,77 +3054,115 @@ function ArchivePage({
   handleMediaInput,
   uploadingFiles,
   deleteMedia,
+  updateMediaDate,
   refreshMedia,
 }) {
-  const photosAndVideos =
-    mediaFiles.filter(
-      (item) =>
-        item.mime?.startsWith(
-          "image/"
-        ) ||
-        item.mime?.startsWith(
-          "video/"
-        )
-    );
+  const [sortOrder, setSortOrder] = useState("asc");
 
-  const audios =
-    mediaFiles.filter(
-      (item) =>
-        item.mime?.startsWith(
-          "audio/"
-        )
-    );
+  const photosAndVideos = mediaFiles.filter(
+    (item) =>
+      item.mime?.startsWith("image/") ||
+      item.mime?.startsWith("video/")
+  );
+
+  const audios = mediaFiles.filter(
+    (item) =>
+      item.mime?.startsWith("audio/")
+  );
+
+  const sortedMedia = [...mediaFiles].sort((a, b) => {
+    const aDate = a.photo_date
+      ? new Date(`${a.photo_date}T00:00:00`).getTime()
+      : null;
+
+    const bDate = b.photo_date
+      ? new Date(`${b.photo_date}T00:00:00`).getTime()
+      : null;
+
+    if (aDate === null && bDate === null) {
+      const ac = new Date(a.created_at || 0).getTime();
+      const bc = new Date(b.created_at || 0).getTime();
+      return bc - ac;
+    }
+
+    if (aDate === null) return 1;
+    if (bDate === null) return -1;
+
+    return sortOrder === "asc"
+      ? aDate - bDate
+      : bDate - aDate;
+  });
+
+  const withoutDate = photosAndVideos.filter(
+    (item) => !item.photo_date
+  ).length;
 
   return (
     <SimplePage
       eyebrow="ARCHIVO GENERAL"
       title="Archivo"
-      description="Todo el material original de la historia en un mismo lugar."
+      description="Todo el material original de la historia en un mismo lugar. Asigná una fecha a cada foto para construir la cronología visual."
     >
       <div className="archiveGrid">
         <ArchiveCard
           title="Recuerdos"
-          number={
-            stories.length
-          }
+          number={stories.length}
         />
 
         <ArchiveCard
           title="Capítulos"
-          number={
-            chapters.length
-          }
+          number={chapters.length}
         />
 
         <ArchiveCard
           title="Audios"
-          number={
-            audios.length
-          }
+          number={audios.length}
         />
 
         <ArchiveCard
           title="Fotos y videos"
-          number={
-            photosAndVideos.length
-          }
+          number={photosAndVideos.length}
         />
       </div>
 
       <div className="mediaToolbar">
-        <h2>
-          Fotos, videos y archivos
-        </h2>
+        <div>
+          <h2>
+            Fotos, videos y archivos
+          </h2>
+
+          <div className="mediaChronologyHint">
+            {withoutDate > 0
+              ? `${withoutDate} archivo${
+                  withoutDate === 1 ? "" : "s"
+                } visual${
+                  withoutDate === 1 ? "" : "es"
+                } todavía sin fecha.`
+              : "Toda la galería visual tiene fecha asignada."}
+          </div>
+        </div>
 
         <div className="mediaToolbarActions">
+          <select
+            className="mediaSortSelect"
+            value={sortOrder}
+            onChange={(event) =>
+              setSortOrder(event.target.value)
+            }
+          >
+            <option value="asc">
+              Más antiguas primero
+            </option>
+
+            <option value="desc">
+              Más recientes primero
+            </option>
+          </select>
+
           <button
             className="secondaryButton"
-            disabled={
-              mediaLoading
-            }
-            onClick={
-              refreshMedia
-            }
+            disabled={mediaLoading}
+            onClick={refreshMedia}
           >
             {mediaLoading
               ? "Actualizando..."
@@ -4599,9 +3171,7 @@ function ArchivePage({
 
           <button
             className="primaryButton"
-            disabled={
-              uploadingFiles
-            }
+            disabled={uploadingFiles}
             onClick={() =>
               mediaInput.current?.click()
             }
@@ -4614,9 +3184,7 @@ function ArchivePage({
       </div>
 
       <input
-        ref={
-          mediaInput
-        }
+        ref={mediaInput}
         hidden
         multiple
         type="file"
@@ -4633,30 +3201,27 @@ function ArchivePage({
         <div className="mediaEmpty">
           Cargando archivo…
         </div>
-      ) : mediaFiles.length ===
-        0 ? (
+      ) : mediaFiles.length === 0 ? (
         <div className="mediaEmpty">
           Todavía no hay archivos visibles. Si acabás de subirlos, tocá “Actualizar”.
         </div>
       ) : (
         <div className="mediaGrid">
-          {mediaFiles.map(
-            (item) => (
-              <MediaCard
-                key={
-                  item.path
-                }
-                item={
-                  item
-                }
-                onDelete={() =>
-                  deleteMedia(
-                    item
-                  )
-                }
-              />
-            )
-          )}
+          {sortedMedia.map((item) => (
+            <MediaCard
+              key={item.path}
+              item={item}
+              onDelete={() =>
+                deleteMedia(item)
+              }
+              onDateChange={(value) =>
+                updateMediaDate(
+                  item,
+                  value
+                )
+              }
+            />
+          ))}
         </div>
       )}
     </SimplePage>
@@ -4666,53 +3231,42 @@ function ArchivePage({
 function MediaCard({
   item,
   onDelete,
+  onDateChange,
 }) {
   const isImage =
-    item.mime?.startsWith(
-      "image/"
-    );
+    item.mime?.startsWith("image/");
 
   const isVideo =
-    item.mime?.startsWith(
-      "video/"
-    );
+    item.mime?.startsWith("video/");
 
   const isAudio =
-    item.mime?.startsWith(
-      "audio/"
-    );
+    item.mime?.startsWith("audio/");
+
+  const isVisual =
+    isImage || isVideo;
 
   return (
     <article className="mediaCard">
       {isImage ? (
         <img
           className="mediaThumb"
-          src={
-            item.url
-          }
-          alt={
-            item.name
-          }
+          src={item.url}
+          alt={item.name}
         />
       ) : isVideo ? (
         <video
           className="mediaVideo"
           controls
           preload="metadata"
-          src={
-            item.url
-          }
+          src={item.url}
         />
       ) : isAudio ? (
         <div className="mediaFilePlaceholder">
           <div>
             <div
               style={{
-                fontSize:
-                  34,
-
-                marginBottom:
-                  12,
+                fontSize: 34,
+                marginBottom: 12,
               }}
             >
               🎙
@@ -4720,12 +3274,9 @@ function MediaCard({
 
             <audio
               controls
-              src={
-                item.url
-              }
+              src={item.url}
               style={{
-                width:
-                  "100%",
+                width: "100%",
               }}
             />
           </div>
@@ -4735,11 +3286,8 @@ function MediaCard({
           <div>
             <div
               style={{
-                fontSize:
-                  38,
-
-                marginBottom:
-                  10,
+                fontSize: 38,
+                marginBottom: 10,
               }}
             >
               ▣
@@ -4753,29 +3301,43 @@ function MediaCard({
       <div className="mediaMeta">
         <div
           className="mediaName"
-          title={
-            item.name
-          }
+          title={item.name}
         >
-          {cleanDisplayName(
-            item.name
-          )}
+          {cleanDisplayName(item.name)}
         </div>
 
         <div className="mediaType">
-          {item.folder}
-          {" · "}
-          {friendlyMime(
-            item.mime
-          )}
+          {item.folder} · {friendlyMime(item.mime)}
         </div>
+
+        {isVisual && (
+          <div className="mediaDateEditor">
+            <label>
+              Fecha de la foto
+            </label>
+
+            <input
+              type="date"
+              value={item.photo_date || ""}
+              onChange={(event) =>
+                onDateChange(
+                  event.target.value
+                )
+              }
+            />
+
+            <small>
+              {item.photo_date
+                ? formatPhotoDate(item.photo_date)
+                : "Sin fecha · queda al final de la cronología"}
+            </small>
+          </div>
+        )}
       </div>
 
       <div className="mediaActions">
         <a
-          href={
-            item.url
-          }
+          href={item.url}
           target="_blank"
           rel="noreferrer"
         >
@@ -4783,9 +3345,7 @@ function MediaCard({
         </a>
 
         <button
-          onClick={
-            onDelete
-          }
+          onClick={onDelete}
         >
           Eliminar
         </button>
@@ -4810,9 +3370,7 @@ function PodcastPage({
       <EditableText
         tag="h1"
         className="pageTitle"
-        value={
-          texts.podcastTitle
-        }
+        value={texts.podcastTitle}
         onChange={(value) =>
           updateText(
             "podcastTitle",
@@ -4824,9 +3382,7 @@ function PodcastPage({
       <EditableText
         tag="p"
         className="pageSubtitle"
-        value={
-          texts.podcastSubtitle
-        }
+        value={texts.podcastSubtitle}
         onChange={(value) =>
           updateText(
             "podcastSubtitle",
@@ -4853,9 +3409,7 @@ function PodcastPage({
 
           <button
             className="secondaryButton"
-            disabled={
-              uploadingFiles
-            }
+            disabled={uploadingFiles}
             onClick={() =>
               podcastInput.current?.click()
             }
@@ -4866,9 +3420,7 @@ function PodcastPage({
           </button>
 
           <input
-            ref={
-              podcastInput
-            }
+            ref={podcastInput}
             hidden
             type="file"
             accept="audio/*"
@@ -4911,9 +3463,7 @@ function DesignPage({
 
         <button
           className="secondaryButton"
-          onClick={
-            restorePremium
-          }
+          onClick={restorePremium}
         >
           Restaurar diseño PREMIUM
         </button>
@@ -4923,9 +3473,7 @@ function DesignPage({
         <DesignGroup title="Fondo general">
           <ColorField
             label="Color de fondo"
-            value={
-              design.background
-            }
+            value={design.background}
             onChange={(value) =>
               updateDesign(
                 "background",
@@ -4963,29 +3511,19 @@ function DesignPage({
             )}
 
             <input
-              ref={
-                backgroundInput
-              }
+              ref={backgroundInput}
               hidden
               type="file"
               accept="image/*"
-              onChange={
-                uploadBackground
-              }
+              onChange={uploadBackground}
             />
           </div>
 
           <RangeField
             label="Visibilidad de la imagen"
-            value={
-              design.backgroundOpacity
-            }
-            min={
-              0
-            }
-            max={
-              100
-            }
+            value={design.backgroundOpacity}
+            min={0}
+            max={100}
             suffix="%"
             onChange={(value) =>
               updateDesign(
@@ -4997,15 +3535,9 @@ function DesignPage({
 
           <RangeField
             label="Desenfoque del fondo"
-            value={
-              design.backgroundBlur
-            }
-            min={
-              0
-            }
-            max={
-              20
-            }
+            value={design.backgroundBlur}
+            min={0}
+            max={20}
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -5019,9 +3551,7 @@ function DesignPage({
         <DesignGroup title="Paleta de colores">
           <ColorField
             label="Color principal"
-            value={
-              design.accent
-            }
+            value={design.accent}
             onChange={(value) =>
               updateDesign(
                 "accent",
@@ -5032,9 +3562,7 @@ function DesignPage({
 
           <ColorField
             label="Texto principal"
-            value={
-              design.text
-            }
+            value={design.text}
             onChange={(value) =>
               updateDesign(
                 "text",
@@ -5045,9 +3573,7 @@ function DesignPage({
 
           <ColorField
             label="Texto secundario"
-            value={
-              design.secondary
-            }
+            value={design.secondary}
             onChange={(value) =>
               updateDesign(
                 "secondary",
@@ -5058,9 +3584,7 @@ function DesignPage({
 
           <ColorField
             label="Tarjetas"
-            value={
-              design.card
-            }
+            value={design.card}
             onChange={(value) =>
               updateDesign(
                 "card",
@@ -5071,9 +3595,7 @@ function DesignPage({
 
           <ColorField
             label="Menú lateral"
-            value={
-              design.sidebar
-            }
+            value={design.sidebar}
             onChange={(value) =>
               updateDesign(
                 "sidebar",
@@ -5084,9 +3606,7 @@ function DesignPage({
 
           <ColorField
             label="Bordes"
-            value={
-              design.border
-            }
+            value={design.border}
             onChange={(value) =>
               updateDesign(
                 "border",
@@ -5099,15 +3619,9 @@ function DesignPage({
         <DesignGroup title="Tarjetas y paneles">
           <RangeField
             label="Transparencia"
-            value={
-              design.cardOpacity
-            }
-            min={
-              20
-            }
-            max={
-              100
-            }
+            value={design.cardOpacity}
+            min={20}
+            max={100}
             suffix="%"
             onChange={(value) =>
               updateDesign(
@@ -5119,15 +3633,9 @@ function DesignPage({
 
           <RangeField
             label="Redondeo de tarjetas"
-            value={
-              design.radius
-            }
-            min={
-              0
-            }
-            max={
-              40
-            }
+            value={design.radius}
+            min={0}
+            max={40}
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -5139,15 +3647,9 @@ function DesignPage({
 
           <RangeField
             label="Redondeo de botones"
-            value={
-              design.buttonRadius
-            }
-            min={
-              0
-            }
-            max={
-              30
-            }
+            value={design.buttonRadius}
+            min={0}
+            max={30}
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -5161,15 +3663,9 @@ function DesignPage({
         <DesignGroup title="Estructura">
           <RangeField
             label="Ancho del menú lateral"
-            value={
-              design.sidebarWidth
-            }
-            min={
-              200
-            }
-            max={
-              360
-            }
+            value={design.sidebarWidth}
+            min={200}
+            max={360}
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -5181,15 +3677,9 @@ function DesignPage({
 
           <RangeField
             label="Ancho máximo del contenido"
-            value={
-              design.contentWidth
-            }
-            min={
-              800
-            }
-            max={
-              1600
-            }
+            value={design.contentWidth}
+            min={800}
+            max={1600}
             suffix=" px"
             onChange={(value) =>
               updateDesign(
@@ -5203,9 +3693,7 @@ function DesignPage({
         <DesignGroup title="Tipografía">
           <SelectField
             label="Fuente de títulos"
-            value={
-              design.titleFont
-            }
+            value={design.titleFont}
             options={[
               "Georgia",
               "Arial",
@@ -5221,9 +3709,7 @@ function DesignPage({
 
           <SelectField
             label="Fuente general"
-            value={
-              design.bodyFont
-            }
+            value={design.bodyFont}
             options={[
               "Arial",
               "Georgia",
@@ -5248,10 +3734,8 @@ function DesignPage({
                   design.cardOpacity /
                     100
                 ),
-
               borderRadius:
                 `${design.radius}px`,
-
               borderColor:
                 design.border,
             }}
@@ -5260,15 +3744,10 @@ function DesignPage({
               style={{
                 color:
                   design.accent,
-
-                fontSize:
-                  10,
-
+                fontSize: 10,
                 letterSpacing:
                   ".2em",
-
-                marginBottom:
-                  12,
+                marginBottom: 12,
               }}
             >
               NO SE QUIEN SOY
@@ -5278,18 +3757,13 @@ function DesignPage({
               style={{
                 color:
                   design.text,
-
                 fontFamily:
                   design.titleFont ===
                   "Georgia"
                     ? "Georgia, serif"
                     : `${design.titleFont}, sans-serif`,
-
-                fontSize:
-                  28,
-
-                marginBottom:
-                  12,
+                fontSize: 28,
+                marginBottom: 12,
               }}
             >
               Una historia que merece ser contada
@@ -5299,39 +3773,27 @@ function DesignPage({
               style={{
                 color:
                   design.secondary,
-
-                lineHeight:
-                  1.6,
+                lineHeight: 1.6,
               }}
             >
-              Esta vista te permite ver en tiempo real cómo quedan los colores, la transparencia, los bordes, las tipografías y el estilo general.
+              Esta vista te permite ver en tiempo real cómo quedan los colores,
+              la transparencia, los bordes, las tipografías y el estilo general.
             </p>
 
             <button
               style={{
-                marginTop:
-                  12,
-
-                minHeight:
-                  44,
-
+                marginTop: 12,
+                minHeight: 44,
                 padding:
                   "0 18px",
-
                 border:
                   `1px solid ${design.accent}`,
-
                 borderRadius:
                   `${design.buttonRadius}px`,
-
                 background:
                   design.accent,
-
-                color:
-                  "#111",
-
-                fontWeight:
-                  700,
+                color: "#111",
+                fontWeight: 700,
               }}
             >
               Botón de ejemplo
@@ -5349,31 +3811,22 @@ function EditableText({
   onChange,
   className = "",
 }) {
-  const Tag =
-    tag;
-
-  const ref =
-    useRef(null);
+  const Tag = tag;
+  const ref = useRef(null);
 
   useEffect(() => {
     if (
       ref.current &&
-      ref.current.innerText !==
-        value
+      ref.current.innerText !== value
     ) {
-      ref.current.innerText =
-        value;
+      ref.current.innerText = value;
     }
   }, [value]);
 
   return (
     <Tag
-      ref={
-        ref
-      }
-      className={
-        `${className} editableText`
-      }
+      ref={ref}
+      className={`${className} editableText`}
       contentEditable
       suppressContentEditableWarning
       onBlur={(event) =>
@@ -5418,13 +3871,8 @@ function ArchiveCard({
 }) {
   return (
     <div className="archiveCard">
-      <span>
-        {title}
-      </span>
-
-      <strong>
-        {number}
-      </strong>
+      <span>{title}</span>
+      <strong>{number}</strong>
     </div>
   );
 }
@@ -5435,10 +3883,7 @@ function DesignGroup({
 }) {
   return (
     <div className="designGroup">
-      <h3>
-        {title}
-      </h3>
-
+      <h3>{title}</h3>
       {children}
     </div>
   );
@@ -5451,16 +3896,12 @@ function ColorField({
 }) {
   return (
     <div className="field">
-      <label>
-        {label}
-      </label>
+      <label>{label}</label>
 
       <div className="colorField">
         <input
           type="color"
-          value={
-            value
-          }
+          value={value}
           onChange={(event) =>
             onChange(
               event.target.value
@@ -5468,9 +3909,7 @@ function ColorField({
           }
         />
 
-        <span>
-          {value}
-        </span>
+        <span>{value}</span>
       </div>
     </div>
   );
@@ -5487,9 +3926,7 @@ function RangeField({
   return (
     <div className="field">
       <div className="fieldTop">
-        <label>
-          {label}
-        </label>
+        <label>{label}</label>
 
         <span>
           {value}
@@ -5499,15 +3936,9 @@ function RangeField({
 
       <input
         type="range"
-        min={
-          min
-        }
-        max={
-          max
-        }
-        value={
-          value
-        }
+        min={min}
+        max={max}
+        value={value}
         onChange={(event) =>
           onChange(
             Number(
@@ -5528,14 +3959,10 @@ function SelectField({
 }) {
   return (
     <div className="field">
-      <label>
-        {label}
-      </label>
+      <label>{label}</label>
 
       <select
-        value={
-          value
-        }
+        value={value}
         onChange={(event) =>
           onChange(
             event.target.value
@@ -5543,16 +3970,10 @@ function SelectField({
         }
       >
         {options.map(
-          (
-            option
-          ) => (
+          (option) => (
             <option
-              key={
-                option
-              }
-              value={
-                option
-              }
+              key={option}
+              value={option}
             >
               {option}
             </option>
@@ -5573,56 +3994,23 @@ function guessMimeFromName(
       ?.toLowerCase();
 
   const map = {
-    jpg:
-      "image/jpeg",
-
-    jpeg:
-      "image/jpeg",
-
-    png:
-      "image/png",
-
-    webp:
-      "image/webp",
-
-    gif:
-      "image/gif",
-
-    heic:
-      "image/heic",
-
-    heif:
-      "image/heif",
-
-    mov:
-      "video/quicktime",
-
-    mp4:
-      "video/mp4",
-
-    m4v:
-      "video/x-m4v",
-
-    webm:
-      "video/webm",
-
-    mp3:
-      "audio/mpeg",
-
-    m4a:
-      "audio/mp4",
-
-    wav:
-      "audio/wav",
-
-    pdf:
-      "application/pdf",
-
-    doc:
-      "application/msword",
-
-    docx:
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    heic: "image/heic",
+    heif: "image/heif",
+    mov: "video/quicktime",
+    mp4: "video/mp4",
+    m4v: "video/x-m4v",
+    webm: "video/webm",
+    mp3: "audio/mpeg",
+    m4a: "audio/mp4",
+    wav: "audio/wav",
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   };
 
   return (
@@ -5677,28 +4065,31 @@ function cleanDisplayName(
   );
 }
 
-function countWords(
-  value
-) {
+function formatPhotoDate(value) {
+  if (!value) return "";
+
+  try {
+    return new Date(`${value}T00:00:00`).toLocaleDateString("es-AR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
+
+function countWords(value) {
   const text =
     String(
-      value ||
-        ""
+      value || ""
     ).trim();
 
-  if (
-    !text
-  ) {
-    return 0;
-  }
+  if (!text) return 0;
 
   return text
-    .split(
-      /\s+/
-    )
-    .filter(
-      Boolean
-    )
+    .split(/\s+/)
+    .filter(Boolean)
     .length;
 }
 
@@ -5707,13 +4098,11 @@ function formatTimer(
 ) {
   const minutes =
     Math.floor(
-      totalSeconds /
-        60
+      totalSeconds / 60
     );
 
   const seconds =
-    totalSeconds %
-    60;
+    totalSeconds % 60;
 
   return `${String(
     minutes
@@ -5728,14 +4117,8 @@ function formatTimer(
   )}`;
 }
 
-function formatDate(
-  value
-) {
-  if (
-    !value
-  ) {
-    return "";
-  }
+function formatDate(value) {
+  if (!value) return "";
 
   try {
     return new Date(
@@ -5743,14 +4126,9 @@ function formatDate(
     ).toLocaleDateString(
       "es-AR",
       {
-        day:
-          "2-digit",
-
-        month:
-          "long",
-
-        year:
-          "numeric",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
       }
     );
   } catch {
@@ -5758,18 +4136,13 @@ function formatDate(
   }
 }
 
-function normalizeText(
-  value
-) {
+function normalizeText(value) {
   return String(
-    value ||
-      ""
+    value || ""
   )
     .trim()
     .toLowerCase()
-    .normalize(
-      "NFD"
-    )
+    .normalize("NFD")
     .replace(
       /[\u0300-\u036f]/g,
       ""
